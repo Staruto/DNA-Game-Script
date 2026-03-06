@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+import copy
+from pathlib import Path
+from typing import Optional
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = ROOT_DIR / "assets"
+ROUTES_DIR = ROOT_DIR / "routes"
+
+DEFAULT_CONFIG = {
+    "skill_region": {"left": 1700, "top": 1000, "width": 860, "height": 440},
+    "result_region": {"left": 0, "top": 800, "width": 2560, "height": 800},
+    "dungeon_name_region": {"left": 0, "top": 120, "width": 700, "height": 260},
+    "loot_marker_region": {"left": 420, "top": 120, "width": 1720, "height": 980},
+    "defence_marker_region": {"left": 620, "top": 120, "width": 1320, "height": 760},
+    "defence_hp_bar_region": {"left": 0, "top": 220, "width": 760, "height": 520},
+    "dungeon_mode": "manual",
+    "manual_dungeon": "defence",
+    "dungeon_detect_interval": 2.0,
+    "dungeon_detect_threshold": 0.78,
+    "target_runs": 0,
+    "enable_run_stats": True,
+    "skill_check_interval": 1.2,
+    "skill_state_confirm_frames": 2,
+    "skill_press_retry_interval": 8.0,
+    "skill_detect_mode": "zero",
+    "skill_zero_threshold": 0.72,
+    "debug_skill_scores": False,
+    "skill_glow_threshold": 0.72,
+    "skill_glow_score_margin": 0.02,
+    "loot_enabled": True,
+    "loot_marker_template": "wedge.png",
+    "loot_check_interval": 0.35,
+    "loot_template_threshold": 0.42,
+    "loot_blue_ratio_threshold": 0.08,
+    "loot_template_icon_crop_ratio": 0.58,
+    "loot_turn_deadzone_px": 40,
+    "loot_turn_gain": 0.08,
+    "loot_turn_max_step_px": 45,
+    "loot_forward_hold_sec": 0.4,
+    "loot_forward_pause_sec": 0.04,
+    "loot_lost_timeout_sec": 1.0,
+    "loot_approach_timeout_sec": 9.0,
+    "debug_loot": False,
+    "defence_enabled": True,
+    "defence_use_hp_bar_stop": False,
+    "defence_entry_template": "defence_wings_inspo_volition.png",
+    "defence_entry_region": {"left": 0, "top": 0, "width": 2560, "height": 1440},
+    "defence_entry_threshold": 0.22,
+    "defence_entry_confirm_frames": 3,
+    "defence_route_mode": "prompt",
+    "defence_route_name": "defence_wings_inspo_volition",
+    "defence_route_record_hotkey_start": "p",
+    "defence_route_record_hotkey_stop": "o",
+    "defence_route_replay_hotkey": "i",
+    "defence_route_replay_enabled": True,
+    "defence_route_replay_after_load_delay_sec": 3.0,
+    "defence_route_replay_fallback_to_cv": False,
+    "defence_check_interval": 0.22,
+    "defence_marker_threshold": 0.55,
+    "defence_hp_bar_threshold": 0.72,
+    "defence_turn_deadzone_px": 36,
+    "defence_turn_gain": 0.085,
+    "defence_turn_max_step_px": 28,
+    "debug_defence": True,
+    "result_check_interval": 0.3,
+    "click_reset_x": 2,
+    "click_reset_y": 2,
+    "click_reset_delay": 0.12,
+    "click_target_settle_delay": 0.08,
+    "start_search_window_after_r": 12.0,
+    "start_redetect_after_cursor_reset": True,
+    "start_redetect_delay": 0.08,
+    "game_window_keywords": ["Duet Night Abyss", "Abyss"],
+    "only_when_foreground": True,
+    "block_keyboard_when_taskbar_visible": True,
+}
+
+
+def get_default_config() -> dict:
+    return copy.deepcopy(DEFAULT_CONFIG)
+
+
+def workspace_path(*parts: str) -> Path:
+    return ROOT_DIR.joinpath(*parts)
+
+
+def asset_path(file_name: str) -> Path:
+    return ASSETS_DIR / file_name
+
+
+def template_path(file_name: str) -> Optional[Path]:
+    asset_candidate = asset_path(file_name)
+    if asset_candidate.exists():
+        return asset_candidate
+
+    root_candidate = workspace_path(file_name)
+    if root_candidate.exists():
+        return root_candidate
+
+    return None
+
+
+def defence_route_path(route_name: str) -> Path:
+    route_name = (route_name or "defence_default").strip() or "defence_default"
+    safe_name = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in route_name)
+    ROUTES_DIR.mkdir(parents=True, exist_ok=True)
+    return ROUTES_DIR / f"{safe_name}.json"

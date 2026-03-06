@@ -1,0 +1,66 @@
+{
+  "route_name": "defence_wings_inspo_volition",
+  "created_at": "2026-03-07 00:12:16",
+  "events": [
+    {
+      "t": 1.5042,
+      "type": "key",
+      "key": "w",
+      "action": "down"
+    },
+    {
+      "t": 2.6732,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 2.8111,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 3.7359,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 3.8939,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 5.1685,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 5.295,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 6.8666,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 7.0033,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 8.0679,
+      "type": "key",
+      "key": "w",
+      "action": "up"
+    }
+  ]
+}
