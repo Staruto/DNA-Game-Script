@@ -16,13 +16,14 @@ class DefenceRouteManager:
 
     def route_file_path(self, route_name: Optional[str] = None):
         if route_name is None:
-            route_name = str(self.config.get("defence_route_name", "defence_default"))
+            route_name = "defence_default"
         return defence_route_path(route_name)
 
     def save_route(self, events, route_name: Optional[str] = None) -> str:
         file_path = self.route_file_path(route_name)
+        payload_route_name = route_name or "defence_default"
         payload = {
-            "route_name": route_name or str(self.config.get("defence_route_name", "defence_default")),
+            "route_name": payload_route_name,
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "events": events,
         }
@@ -44,7 +45,12 @@ class DefenceRouteManager:
         events.sort(key=lambda item: float(item.get("t", 0.0)))
         return events
 
-    def reset_defence_state(self, state: DefenceState, pending_replay_after_delay: bool = False):
+    def reset_defence_state(
+        self,
+        state: DefenceState,
+        pending_replay_after_delay: bool = False,
+        clear_variant: bool = False,
+    ):
         state.started = False
         state.ready_for_skill = False
         state.w_holding = False
@@ -60,18 +66,32 @@ class DefenceRouteManager:
         state.entry_detected_logged = False
         state.waiting_for_entry_logged = False
         state.entry_match_streak = 0
+        state.entry_candidate_variant = None
         state.missing_route_warned = False
+        state.unresolved_variant_logged = False
+        if clear_variant:
+            state.current_variant = None
+            state.active_route_name = None
+            state.route_mode = "disabled"
 
     def start_recording(self, record_state: RouteRecordingState, defence_state: DefenceState):
+        route_name = defence_state.active_route_name
+        if not route_name:
+            print("[WARN] Defence route recording is unavailable until the current defence variant is resolved.")
+            return False
+
         self.controller.release_keys(ROUTE_RECORD_KEYS)
-        self.reset_defence_state(defence_state, pending_replay_after_delay=False)
+        self.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=False)
         record_state.active = True
         record_state.start_ts = time.time()
         record_state.events = []
+        record_state.route_name = route_name
+        record_state.exit_requested = False
         record_state.last_cursor = self.controller.get_cursor_position()
         for key in ROUTE_RECORD_KEYS:
             record_state.key_state[key] = self.controller.is_physical_key_down(key)
-        print(f"[INFO] Defence route recording started. Route={self.config.get('defence_route_name')}")
+        print(f"[INFO] Defence route recording started. Route={route_name}")
+        return True
 
     def stop_recording(self, record_state: RouteRecordingState, save: bool = True):
         if not record_state.active:
@@ -84,13 +104,14 @@ class DefenceRouteManager:
                 record_state.events.append({"t": round(elapsed, 4), "type": "key", "key": key, "action": "up"})
 
         if save:
-            path = self.save_route(record_state.events, str(self.config.get("defence_route_name", "defence_default")))
+            path = self.save_route(record_state.events, record_state.route_name or "defence_default")
             print(f"[INFO] Defence route recording saved: {path} (events={len(record_state.events)})")
         else:
             print("[INFO] Defence route recording cancelled.")
 
         record_state.active = False
         record_state.events = []
+        record_state.route_name = None
         record_state.last_cursor = None
         for key in ROUTE_RECORD_KEYS:
             record_state.key_state[key] = False

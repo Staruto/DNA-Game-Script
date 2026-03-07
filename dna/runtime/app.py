@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from dna.config import get_default_config
 from dna.features.defence_logic import DefenceService
@@ -24,8 +23,6 @@ class DNAApp:
         self.capture = ScreenCapture()
         self.templates = TemplateStore()
         self.route_manager = DefenceRouteManager(self.config, self.controller)
-        self.route_mode: Optional[str] = None
-        self._route_mode_ready_logged = False
         self.dungeon_detector = DungeonDetector(self.config, self.templates)
         self.skill_service = SkillService(self.config, self.capture, self.templates)
         self.result_ui = ResultUIService(self.config, self.capture, self.templates, self.controller)
@@ -68,27 +65,20 @@ class DNAApp:
             print(f"[WARN] Unknown dungeon_mode '{mode}', fallback to 'manual'.")
             self.config["dungeon_mode"] = "manual"
 
-    def _defence_routes_relevant_at_startup(self) -> bool:
-        mode = self.config.get("dungeon_mode", "manual").lower()
-        if mode == "manual":
-            return self.config.get("manual_dungeon", "expulsion") == "defence"
-        return False
+        variants = self.config.get("defence_variants", {})
+        if not isinstance(variants, dict) or not variants:
+            print("[WARN] defence_variants is empty. Defence route automation will remain idle.")
 
-    def _ensure_route_mode_for_profile(self, profile_key: str, defence_state: DefenceState):
-        if profile_key != "defence":
-            return
-        if self.route_mode is None:
-            self.route_mode = self.defence_service.prompt_route_mode()
-            defence_state.route_mode = self.route_mode
-            defence_state.auto_replay_armed = self.route_mode == "playback"
-            print(f"[INFO] Defence route mode: {self.route_mode.upper()}")
+        manual_variant = str(self.config.get("manual_defence_variant", "")).strip()
+        if manual_variant and isinstance(variants, dict) and variants and manual_variant not in variants:
+            fallback_variant = next(iter(variants))
+            print(f"[WARN] Unknown manual_defence_variant '{manual_variant}', fallback to '{fallback_variant}'.")
+            self.config["manual_defence_variant"] = fallback_variant
 
-        if not self._route_mode_ready_logged:
-            if self.route_mode == "record":
-                print("[INFO] Record mode ready. Press P to start recording and O to stop/save/exit.")
-            else:
-                print("[INFO] Playback mode ready. Route replay will auto-start after dungeon entry is detected, or press I to replay manually.")
-            self._route_mode_ready_logged = True
+        route_override = str(self.config.get("defence_route_mode_override", "auto")).strip().lower()
+        if route_override not in ("auto", "record", "playback"):
+            print(f"[WARN] Unknown defence_route_mode_override '{route_override}', fallback to 'auto'.")
+            self.config["defence_route_mode_override"] = "auto"
 
     def run(self):
         self._validate_runtime_config()
@@ -97,11 +87,6 @@ class DNAApp:
         print("[INFO] Input backend: Windows SendInput (DirectX-compatible path).")
         if not self.controller.is_running_as_admin():
             print("[WARN] Not running as administrator. Some games may block input events.")
-
-        if self._defence_routes_relevant_at_startup():
-            self.route_mode = self.defence_service.prompt_route_mode()
-            print(f"[INFO] Defence route mode: {self.route_mode.upper()}")
-            self._route_mode_ready_logged = False
 
         mode = self.config.get("dungeon_mode", "manual").lower()
         manual_profile = DUNGEON_PROFILES[self.config.get("manual_dungeon", "expulsion")]
@@ -119,16 +104,9 @@ class DNAApp:
         print("[INFO] Switch to the game window. Starting in 3 seconds...")
         time.sleep(3)
 
-        if self._defence_routes_relevant_at_startup() and self.route_mode is not None:
-            if self.route_mode == "record":
-                print("[INFO] Record mode ready. Press P to start recording and O to stop/save/exit.")
-            else:
-                print("[INFO] Playback mode ready. Route replay will auto-start after dungeon entry is detected, or press I to replay manually.")
-            self._route_mode_ready_logged = True
-
         session = SessionState(session_start_ts=time.time())
         loot_state = LootState()
-        defence_state = DefenceState(auto_replay_armed=(self.route_mode == "playback"), route_mode=self.route_mode or "disabled")
+        defence_state = DefenceState()
         record_state = RouteRecordingState(
             key_state={key: False for key in ROUTE_RECORD_KEYS},
             hotkey_state={
@@ -140,12 +118,20 @@ class DNAApp:
 
         while True:
             try:
-                if self.route_mode is not None:
-                    self.defence_service.process_hotkeys(record_state, defence_state, self.route_mode)
-                    now = time.time()
+                now = time.time()
+
+                if record_state.exit_requested:
+                    print("[INFO] Recording finished. Exiting.")
+                    break
+                if not record_state.active and not self.controller.is_game_window_foreground():
+                    time.sleep(0.2)
+                    continue
+
+                active_profile = self.dungeon_detector.get_active_profile(self.capture)
+
+                if active_profile.key == "defence" or record_state.active or defence_state.route_mode == "record":
+                    self.defence_service.process_hotkeys(record_state, defence_state)
                     self.route_manager.poll_recording(now, record_state)
-                else:
-                    now = time.time()
 
                 if record_state.exit_requested:
                     print("[INFO] Recording finished. Exiting.")
@@ -153,16 +139,6 @@ class DNAApp:
                 if record_state.active:
                     time.sleep(0.01)
                     continue
-                if self.route_mode == "record":
-                    time.sleep(0.01)
-                    continue
-                if not self.controller.is_game_window_foreground():
-                    time.sleep(0.2)
-                    continue
-
-                now = time.time()
-                active_profile = self.dungeon_detector.get_active_profile(self.capture)
-                self._ensure_route_mode_for_profile(active_profile.key, defence_state)
 
                 if now - session.last_result_check >= self.config["result_check_interval"]:
                     session.last_result_check = now
@@ -171,7 +147,8 @@ class DNAApp:
                         self.controller.release_keys(ROUTE_RECORD_KEYS)
                         self.route_manager.reset_defence_state(
                             defence_state,
-                            pending_replay_after_delay=(self.route_mode == "playback" and active_profile.key == "defence"),
+                            pending_replay_after_delay=False,
+                            clear_variant=True,
                         )
                         session.runs_completed += 1
                         self._print_run_stats(session)
@@ -190,7 +167,7 @@ class DNAApp:
                         continue
                 else:
                     self.controller.release_keys(ROUTE_RECORD_KEYS)
-                    self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False)
+                    self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=True)
 
                 loot_approaching = False
                 if active_profile.key != "defence":

@@ -18,6 +18,9 @@ class DefenceState:
     ready_for_skill: bool = False
     w_holding: bool = False
     last_update_ts: float = 0.0
+    current_variant: Optional[str] = None
+    active_route_name: Optional[str] = None
+    entry_candidate_variant: Optional[str] = None
     replay_active: bool = False
     replay_start_ts: float = 0.0
     replay_index: int = 0
@@ -29,8 +32,9 @@ class DefenceState:
     entry_detected_logged: bool = False
     waiting_for_entry_logged: bool = False
     entry_match_streak: int = 0
-    route_mode: str = "playback"
+    route_mode: str = "disabled"
     missing_route_warned: bool = False
+    unresolved_variant_logged: bool = False
 
 
 @dataclass
@@ -38,6 +42,7 @@ class RouteRecordingState:
     active: bool = False
     start_ts: float = 0.0
     events: List[dict] = field(default_factory=list)
+    route_name: Optional[str] = None
     key_state: Dict[str, bool] = field(default_factory=dict)
     hotkey_state: Dict[str, bool] = field(default_factory=dict)
     last_cursor: Optional[object] = None

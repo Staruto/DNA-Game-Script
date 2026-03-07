@@ -20,31 +20,75 @@ class DefenceService:
         self._marker_warned = False
         self._hp_warned = False
 
-    def prompt_route_mode(self) -> str:
-        configured = str(self.config.get("defence_route_mode", "prompt")).strip().lower()
-        if configured in ("record", "playback"):
-            return configured
+    def _get_defence_variants(self) -> dict:
+        variants = self.config.get("defence_variants", {})
+        return variants if isinstance(variants, dict) else {}
 
-        prompt = "[INPUT] Defence route mode: [R]ecord / [P]layback (default P): "
-        try:
-            while True:
-                answer = input(prompt).strip().lower()
-                if answer in ("", "p", "playback", "2"):
-                    return "playback"
-                if answer in ("r", "record", "1"):
-                    return "record"
-                print("[WARN] Invalid choice. Enter R or P.")
-        except EOFError:
-            return "playback"
+    def _get_variant_display_name(self, variant_key: str) -> str:
+        variants = self._get_defence_variants()
+        variant = variants.get(variant_key, {}) if isinstance(variants, dict) else {}
+        display_name = variant.get("display_name") if isinstance(variant, dict) else None
+        return str(display_name or variant_key)
 
-    def _get_defence_entry_template_gray(self):
-        template_name = str(self.config.get("defence_entry_template", "")).strip()
-        return self.templates.load_gray(template_name) if template_name else None
+    def _resolve_route_mode(self, route_name: str) -> str:
+        override = str(self.config.get("defence_route_mode_override", "auto")).strip().lower()
+        if override in ("record", "playback"):
+            return override
+        path = self.route_manager.route_file_path(route_name)
+        return "playback" if path.exists() else "record"
 
-    def detect_entry_ready(self) -> bool:
-        template = self._get_defence_entry_template_gray()
+    def _detect_best_entry_variant(self):
         region = self.config.get("defence_entry_region")
-        if template is None or region is None:
+        variants = self._get_defence_variants()
+        if region is None or not variants:
+            return None, None
+
+        gray = self.capture.grab_gray(region)
+        if gray is None or gray.size == 0:
+            return None, None
+
+        best_variant = None
+        best_score = -1.0
+        debug_enabled = bool(self.config.get("debug_defence", False))
+        for variant_key, variant in variants.items():
+            if not isinstance(variant, dict):
+                continue
+            template_name = str(variant.get("entry_template", "")).strip()
+            if not template_name:
+                continue
+            template = self.templates.load_gray(template_name)
+            if template is None:
+                continue
+            if template.shape[:2] != gray.shape[:2]:
+                resized_template = cv2.resize(template, (gray.shape[1], gray.shape[0]), interpolation=cv2.INTER_LINEAR)
+            else:
+                resized_template = template
+
+            result = cv2.matchTemplate(gray, resized_template, cv2.TM_CCOEFF_NORMED)
+            _, max_score, _, _ = cv2.minMaxLoc(result)
+            if debug_enabled:
+                print(f"[DEBUG] defence entry variant={variant_key} score={float(max_score):.3f}")
+            if max_score > best_score:
+                best_score = float(max_score)
+                best_variant = str(variant_key)
+
+        threshold = float(self.config.get("defence_entry_threshold", 0.22))
+        if debug_enabled:
+            print(f"[DEBUG] defence entry best_variant={best_variant} score={best_score:.3f} threshold={threshold:.3f}")
+        if best_variant is None or best_score < threshold:
+            return None, best_score
+        return best_variant, best_score
+
+    def _detect_entry_ready_for_variant(self, variant_key: str) -> bool:
+        region = self.config.get("defence_entry_region")
+        variants = self._get_defence_variants()
+        variant = variants.get(variant_key, {}) if isinstance(variants, dict) else {}
+        template_name = str(variant.get("entry_template", "")).strip() if isinstance(variant, dict) else ""
+        if region is None or not template_name:
+            return False
+
+        template = self.templates.load_gray(template_name)
+        if template is None:
             return False
 
         gray = self.capture.grab_gray(region)
@@ -60,18 +104,20 @@ class DefenceService:
         _, max_score, _, _ = cv2.minMaxLoc(result)
         threshold = float(self.config.get("defence_entry_threshold", 0.22))
         if bool(self.config.get("debug_defence", False)):
-            print(f"[DEBUG] defence entry score={float(max_score):.3f}, threshold={threshold:.3f}")
+            print(f"[DEBUG] defence entry confirm variant={variant_key} score={float(max_score):.3f} threshold={threshold:.3f}")
         return bool(float(max_score) >= threshold)
 
     def _arm_auto_replay_if_ready(self, now: float, state: DefenceState):
-        if not state.auto_replay_armed or state.replay_active or state.replay_pending_until > 0.0:
+        if state.route_mode != "playback" or state.current_variant is None:
+            return
+        if state.ready_for_skill or state.replay_active or state.replay_pending_until > 0.0:
             return
 
         if not state.waiting_for_entry_logged:
             print("[INFO] Waiting for defence entry detection before auto replay.")
             state.waiting_for_entry_logged = True
 
-        if self.detect_entry_ready():
+        if self._detect_entry_ready_for_variant(state.current_variant):
             state.entry_match_streak += 1
         else:
             state.entry_match_streak = 0
@@ -86,9 +132,96 @@ class DefenceService:
                 print(f"[INFO] Defence entry detected. Route replay will start in {delay:.1f}s.")
                 state.entry_detected_logged = True
 
+    def _apply_variant_resolution(self, now: float, state: DefenceState, variant_key: str):
+        variants = self._get_defence_variants()
+        variant = variants.get(variant_key, {}) if isinstance(variants, dict) else {}
+        route_name = str(variant.get("route_name") or variant_key)
+        route_mode = self._resolve_route_mode(route_name)
+        variant_changed = state.current_variant != variant_key
+        route_changed = state.active_route_name != route_name or state.route_mode != route_mode
+
+        state.current_variant = variant_key
+        state.active_route_name = route_name
+        state.entry_candidate_variant = None
+        state.entry_match_streak = 0
+        state.unresolved_variant_logged = False
+        state.waiting_for_entry_logged = False
+
+        if route_changed:
+            state.route_mode = route_mode
+            state.replay_route_name = None
+            state.replay_events = None
+            state.replay_index = 0
+            state.replay_pending_until = 0.0
+            state.replay_active = False
+            state.replay_held_keys.clear()
+            state.missing_route_warned = False
+
+        state.auto_replay_armed = route_mode == "playback" and not state.ready_for_skill
+        state.entry_detected_logged = False
+
+        if variant_changed or route_changed:
+            display_name = self._get_variant_display_name(variant_key)
+            print(f"[INFO] Defence variant resolved: {display_name} ({variant_key})")
+            if route_mode == "playback":
+                path = self.route_manager.route_file_path(route_name)
+                print(f"[INFO] Defence route mode: PLAYBACK ({path.name})")
+                print("[INFO] Playback mode ready. Route replay will auto-start after dungeon entry is confirmed, or press I to replay manually.")
+            else:
+                print(f"[INFO] Defence route mode: RECORD ({route_name}.json not found)")
+                print("[INFO] Record mode ready. Press P to start recording and O to stop/save/exit.")
+
+    def resolve_variant(self, now: float, state: DefenceState) -> Optional[str]:
+        if state.current_variant:
+            return state.current_variant
+
+        variants = self._get_defence_variants()
+        if not variants:
+            if not state.unresolved_variant_logged:
+                print("[WARN] No defence variants are configured. Waiting for a valid defence variant configuration.")
+                state.unresolved_variant_logged = True
+            return None
+
+        auto_detect = bool(self.config.get("auto_detect_defence", True))
+        if not auto_detect:
+            manual_variant = str(self.config.get("manual_defence_variant", "")).strip()
+            if manual_variant not in variants:
+                if not state.unresolved_variant_logged:
+                    print(f"[WARN] Unknown manual defence variant '{manual_variant}'. Waiting for a valid manual_defence_variant.")
+                    state.unresolved_variant_logged = True
+                return None
+            self._apply_variant_resolution(now, state, manual_variant)
+            return state.current_variant
+
+        matched_variant, _ = self._detect_best_entry_variant()
+        if matched_variant is None:
+            state.entry_candidate_variant = None
+            state.entry_match_streak = 0
+            if not state.unresolved_variant_logged:
+                print("[INFO] Waiting for defence variant detection before record/playback selection.")
+                state.unresolved_variant_logged = True
+            return None
+
+        if state.entry_candidate_variant == matched_variant:
+            state.entry_match_streak += 1
+        else:
+            state.entry_candidate_variant = matched_variant
+            state.entry_match_streak = 1
+
+        confirm_frames = max(1, int(self.config.get("defence_entry_confirm_frames", 3)))
+        if state.entry_match_streak < confirm_frames:
+            return None
+
+        self._apply_variant_resolution(now, state, matched_variant)
+        return state.current_variant
+
     def is_prephase_active(self, state: DefenceState) -> bool:
         if state.ready_for_skill:
             return False
+        if state.current_variant is None:
+            return True
+        if state.route_mode == "record":
+            return True
         if state.replay_active or state.replay_pending_until > 0.0 or state.auto_replay_armed or state.w_holding:
             return True
         return False
@@ -108,7 +241,9 @@ class DefenceService:
         if not self.config.get("defence_route_replay_enabled", True):
             return None
 
-        route_name = str(self.config.get("defence_route_name", "defence_default"))
+        route_name = state.active_route_name
+        if not route_name:
+            return None
         if state.replay_route_name != route_name:
             state.replay_route_name = route_name
             state.replay_events = None
@@ -131,8 +266,6 @@ class DefenceService:
             return None
 
         pending_until = float(state.replay_pending_until)
-        if state.auto_replay_armed and not state.replay_active and pending_until <= 0.0:
-            return True
         if not state.replay_active and pending_until <= 0.0:
             return None
         if not state.replay_active and now < pending_until:
@@ -216,11 +349,23 @@ class DefenceService:
                 state.w_holding = False
             return False
 
+        if self.resolve_variant(now, state) is None:
+            state.last_update_ts = now
+            return True
+
         self._arm_auto_replay_if_ready(now, state)
+
         replay_status = self._run_route_replay(now, state)
         if replay_status is not None:
             state.last_update_ts = now
             return replay_status
+
+        if state.route_mode == "record":
+            if state.w_holding:
+                self.controller.key_up("w")
+                state.w_holding = False
+            state.last_update_ts = now
+            return True
 
         if state.route_mode == "playback" and not self.config.get("defence_route_replay_fallback_to_cv", False):
             if state.w_holding:
@@ -231,7 +376,7 @@ class DefenceService:
 
         return self._process_marker_fallback(now, state)
 
-    def process_hotkeys(self, record_state: RouteRecordingState, defence_state: DefenceState, route_mode: str):
+    def process_hotkeys(self, record_state: RouteRecordingState, defence_state: DefenceState):
         start_key = str(self.config.get("defence_route_record_hotkey_start", "p")).lower()
         stop_key = str(self.config.get("defence_route_record_hotkey_stop", "o")).lower()
         replay_key = str(self.config.get("defence_route_replay_hotkey", "i")).lower()
@@ -241,6 +386,13 @@ class DefenceService:
             previous_down = bool(record_state.hotkey_state.get(key, False))
             record_state.hotkey_state[key] = now_down
             return now_down and not previous_down
+
+        route_mode = defence_state.route_mode
+        if route_mode == "disabled":
+            just_pressed(start_key)
+            just_pressed(stop_key)
+            just_pressed(replay_key)
+            return
 
         if route_mode == "record":
             if just_pressed(start_key):
@@ -258,7 +410,7 @@ class DefenceService:
         just_pressed(stop_key)
         if just_pressed(replay_key):
             self.controller.release_keys(ROUTE_RECORD_KEYS)
-            self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False)
+            self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=False)
             defence_state.replay_pending_until = time.time()
             defence_state.auto_replay_armed = False
             print("[INFO] Defence route replay manually triggered.")
