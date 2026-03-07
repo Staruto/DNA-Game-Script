@@ -77,7 +77,7 @@ DEFAULT_CONFIG = {
     "start_search_window_after_r": 12.0,
     "start_redetect_after_cursor_reset": True,
     "start_redetect_delay": 0.08,
-    "game_window_keywords": ["Duet Night Abyss", "Abyss"],
+    "game_window_keywords": "Duet Night Abyss",
     "only_when_foreground": True,
     "block_keyboard_when_taskbar_visible": True,
 }
