@@ -109,6 +109,7 @@ class DNAApp:
         defence_state = DefenceState()
         record_state = RouteRecordingState(
             key_state={key: False for key in ROUTE_RECORD_KEYS},
+            mouse_button_state={"left": False, "right": False},
             hotkey_state={
                 str(self.config.get("defence_route_record_hotkey_start", "p")).lower(): False,
                 str(self.config.get("defence_route_record_hotkey_stop", "o")).lower(): False,
@@ -158,12 +159,18 @@ class DNAApp:
                         continue
 
                 if active_profile.key == "defence":
-                    if now - defence_state.last_update_ts >= float(self.config.get("defence_check_interval", 0.22)):
+                    update_interval = float(self.config.get("defence_check_interval", 0.22))
+                    if defence_state.replay_active:
+                        update_interval = float(self.config.get("defence_replay_tick_interval", 0.01))
+                    if now - defence_state.last_update_ts >= update_interval:
                         defence_active = self.defence_service.update(now, defence_state)
                     else:
                         defence_active = self.defence_service.is_prephase_active(defence_state)
                     if defence_active:
-                        time.sleep(0.02)
+                        sleep_interval = 0.02
+                        if defence_state.replay_active:
+                            sleep_interval = float(self.config.get("defence_replay_tick_interval", 0.01))
+                        time.sleep(sleep_interval)
                         continue
                 else:
                     self.controller.release_keys(ROUTE_RECORD_KEYS)

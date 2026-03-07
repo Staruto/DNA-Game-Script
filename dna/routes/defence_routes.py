@@ -5,7 +5,7 @@ import time
 from typing import Optional
 
 from dna.config import defence_route_path
-from dna.platform.windows import ROUTE_RECORD_KEYS, WindowsController
+from dna.platform.windows import ROUTE_RECORD_KEYS, ROUTE_RECORD_MOUSE_BUTTONS, WindowsController
 from dna.runtime.state import DefenceState, RouteRecordingState
 
 
@@ -61,6 +61,8 @@ class DefenceRouteManager:
         state.replay_events = None
         state.replay_route_name = None
         state.replay_held_keys.clear()
+        self.controller.release_mouse_buttons(state.replay_held_mouse_buttons)
+        state.replay_held_mouse_buttons.clear()
         state.replay_pending_until = 0.0
         state.auto_replay_armed = pending_replay_after_delay
         state.entry_detected_logged = False
@@ -81,6 +83,7 @@ class DefenceRouteManager:
             return False
 
         self.controller.release_keys(ROUTE_RECORD_KEYS)
+        self.controller.release_mouse_buttons(ROUTE_RECORD_MOUSE_BUTTONS)
         self.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=False)
         record_state.active = True
         record_state.start_ts = time.time()
@@ -90,6 +93,8 @@ class DefenceRouteManager:
         record_state.last_cursor = self.controller.get_cursor_position()
         for key in ROUTE_RECORD_KEYS:
             record_state.key_state[key] = self.controller.is_physical_key_down(key)
+        for button in ROUTE_RECORD_MOUSE_BUTTONS:
+            record_state.mouse_button_state[button] = self.controller.is_physical_mouse_button_down(button)
         print(f"[INFO] Defence route recording started. Route={route_name}")
         return True
 
@@ -102,6 +107,11 @@ class DefenceRouteManager:
         for key in ROUTE_RECORD_KEYS:
             if record_state.key_state.get(key, False):
                 record_state.events.append({"t": round(elapsed, 4), "type": "key", "key": key, "action": "up"})
+        for button in ROUTE_RECORD_MOUSE_BUTTONS:
+            if record_state.mouse_button_state.get(button, False):
+                record_state.events.append(
+                    {"t": round(elapsed, 4), "type": "mouse_button", "button": button, "action": "up"}
+                )
 
         if save:
             path = self.save_route(record_state.events, record_state.route_name or "defence_default")
@@ -115,6 +125,8 @@ class DefenceRouteManager:
         record_state.last_cursor = None
         for key in ROUTE_RECORD_KEYS:
             record_state.key_state[key] = False
+        for button in ROUTE_RECORD_MOUSE_BUTTONS:
+            record_state.mouse_button_state[button] = False
 
     def poll_recording(self, now: float, record_state: RouteRecordingState):
         if not record_state.active:
@@ -136,6 +148,20 @@ class DefenceRouteManager:
                     }
                 )
                 record_state.key_state[key] = current
+
+        for button in ROUTE_RECORD_MOUSE_BUTTONS:
+            current = self.controller.is_physical_mouse_button_down(button)
+            previous = record_state.mouse_button_state.get(button, False)
+            if current != previous:
+                record_state.events.append(
+                    {
+                        "t": round(elapsed, 4),
+                        "type": "mouse_button",
+                        "button": button,
+                        "action": "down" if current else "up",
+                    }
+                )
+                record_state.mouse_button_state[button] = current
 
         cursor = self.controller.get_cursor_position()
         if cursor is not None and record_state.last_cursor is not None:

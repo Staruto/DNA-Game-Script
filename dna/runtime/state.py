@@ -27,6 +27,7 @@ class DefenceState:
     replay_events: Optional[List[dict]] = None
     replay_route_name: Optional[str] = None
     replay_held_keys: Set[str] = field(default_factory=set)
+    replay_held_mouse_buttons: Set[str] = field(default_factory=set)
     replay_pending_until: float = 0.0
     auto_replay_armed: bool = False
     entry_detected_logged: bool = False
@@ -44,6 +45,7 @@ class RouteRecordingState:
     events: List[dict] = field(default_factory=list)
     route_name: Optional[str] = None
     key_state: Dict[str, bool] = field(default_factory=dict)
+    mouse_button_state: Dict[str, bool] = field(default_factory=dict)
     hotkey_state: Dict[str, bool] = field(default_factory=dict)
     last_cursor: Optional[object] = None
     exit_requested: bool = False

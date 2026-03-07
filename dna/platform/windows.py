@@ -18,6 +18,8 @@ KEYEVENTF_SCANCODE = 0x0008
 MOUSEEVENTF_MOVE = 0x0001
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
+MOUSEEVENTF_RIGHTDOWN = 0x0008
+MOUSEEVENTF_RIGHTUP = 0x0010
 MOUSEEVENTF_ABSOLUTE = 0x8000
 MOUSEEVENTF_VIRTUALDESK = 0x4000
 
@@ -123,6 +125,8 @@ SCANCODES = {
 }
 
 VKCODES = {
+    "left_mouse": 0x01,
+    "right_mouse": 0x02,
     "w": 0x57,
     "e": 0x45,
     "f": 0x46,
@@ -137,6 +141,7 @@ VKCODES = {
 }
 
 ROUTE_RECORD_KEYS = ["w", "f", "e", "ctrl", "space", "shift"]
+ROUTE_RECORD_MOUSE_BUTTONS = ["left", "right"]
 
 
 class WindowsController:
@@ -277,14 +282,53 @@ class WindowsController:
         ii_.mi = MouseInput(int(dx), int(dy), 0, MOUSEEVENTF_MOVE, 0, 0)
         self._send_input([Input(INPUT_MOUSE, ii_)])
 
+    def _resolve_mouse_button_flags(self, button: str):
+        button = str(button).strip().lower()
+        if button == "left":
+            return MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP
+        if button == "right":
+            return MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP
+        return None, None
+
+    def mouse_button_down(self, button: str) -> bool:
+        down_flag, _ = self._resolve_mouse_button_flags(button)
+        if down_flag is None:
+            return False
+        ii_ = InputUnion()
+        ii_.mi = MouseInput(0, 0, 0, down_flag, 0, 0)
+        return self._send_input([Input(INPUT_MOUSE, ii_)])
+
+    def mouse_button_up(self, button: str) -> bool:
+        _, up_flag = self._resolve_mouse_button_flags(button)
+        if up_flag is None:
+            return False
+        ii_ = InputUnion()
+        ii_.mi = MouseInput(0, 0, 0, up_flag, 0, 0)
+        return self._send_input([Input(INPUT_MOUSE, ii_)])
+
+    def release_mouse_buttons(self, buttons: Iterable[str]):
+        for button in buttons:
+            self.mouse_button_up(button)
+
+    def is_physical_mouse_button_down(self, button: str) -> bool:
+        button = str(button).strip().lower()
+        if button == "left":
+            vk_code = VKCODES["left_mouse"]
+        elif button == "right":
+            vk_code = VKCODES["right_mouse"]
+        else:
+            return False
+        return bool(GetAsyncKeyState(vk_code) & 0x8000)
+
     def left_click(self, hold_delay: float = 0.1):
-        ii_down = InputUnion()
-        ii_down.mi = MouseInput(0, 0, 0, MOUSEEVENTF_LEFTDOWN, 0, 0)
-        ii_up = InputUnion()
-        ii_up.mi = MouseInput(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, 0)
-        self._send_input([Input(INPUT_MOUSE, ii_down)])
+        self.mouse_button_down("left")
         time.sleep(hold_delay)
-        self._send_input([Input(INPUT_MOUSE, ii_up)])
+        self.mouse_button_up("left")
+
+    def left_double_click(self, hold_delay: float = 0.06, interval: float = 0.05):
+        self.left_click(hold_delay=hold_delay)
+        time.sleep(interval)
+        self.left_click(hold_delay=hold_delay)
 
     def press_key(self, key: str, delay: float = 0.1):
         if not self.can_send_keyboard_input():
