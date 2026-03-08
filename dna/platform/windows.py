@@ -111,6 +111,7 @@ GetCursorPos.argtypes = (ctypes.POINTER(POINT),)
 GetCursorPos.restype = wintypes.BOOL
 
 SCANCODES = {
+    "esc": 0x01,
     "w": 0x11,
     "e": 0x12,
     "f": 0x21,
@@ -127,6 +128,7 @@ SCANCODES = {
 VKCODES = {
     "left_mouse": 0x01,
     "right_mouse": 0x02,
+    "esc": 0x1B,
     "w": 0x57,
     "e": 0x45,
     "f": 0x46,

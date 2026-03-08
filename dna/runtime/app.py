@@ -80,6 +80,12 @@ class DNAApp:
             print(f"[WARN] Unknown defence_route_mode_override '{route_override}', fallback to 'auto'.")
             self.config["defence_route_mode_override"] = "auto"
 
+        keywords = self.config.get("game_window_keywords", [])
+        if isinstance(keywords, str):
+            self.config["game_window_keywords"] = [keywords]
+        elif not isinstance(keywords, list):
+            self.config["game_window_keywords"] = ["Duet Night Abyss", "Abyss"]
+
     def run(self):
         self._validate_runtime_config()
 

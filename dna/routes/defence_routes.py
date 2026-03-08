@@ -64,6 +64,7 @@ class DefenceRouteManager:
         self.controller.release_mouse_buttons(state.replay_held_mouse_buttons)
         state.replay_held_mouse_buttons.clear()
         state.replay_pending_until = 0.0
+        state.replay_finished_at = 0.0
         state.auto_replay_armed = pending_replay_after_delay
         state.entry_detected_logged = False
         state.waiting_for_entry_logged = False
@@ -71,6 +72,13 @@ class DefenceRouteManager:
         state.entry_candidate_variant = None
         state.missing_route_warned = False
         state.unresolved_variant_logged = False
+        state.validation_attempted = False
+        state.recovery_active = False
+        state.recovery_step = "idle"
+        state.recovery_step_since = 0.0
+        state.recovery_retry_count = 0
+        state.recovery_notice_count = 0
+        state.popup_detected_logged = False
         if clear_variant:
             state.current_variant = None
             state.active_route_name = None

@@ -29,6 +29,7 @@ class DefenceState:
     replay_held_keys: Set[str] = field(default_factory=set)
     replay_held_mouse_buttons: Set[str] = field(default_factory=set)
     replay_pending_until: float = 0.0
+    replay_finished_at: float = 0.0
     auto_replay_armed: bool = False
     entry_detected_logged: bool = False
     waiting_for_entry_logged: bool = False
@@ -36,6 +37,13 @@ class DefenceState:
     route_mode: str = "disabled"
     missing_route_warned: bool = False
     unresolved_variant_logged: bool = False
+    validation_attempted: bool = False
+    recovery_active: bool = False
+    recovery_step: str = "idle"
+    recovery_step_since: float = 0.0
+    recovery_retry_count: int = 0
+    recovery_notice_count: int = 0
+    popup_detected_logged: bool = False
 
 
 @dataclass
