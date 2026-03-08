@@ -61,7 +61,7 @@ DEFAULT_CONFIG = {
         },
     },
     "defence_entry_region": {"left": 0, "top": 0, "width": 2560, "height": 1440},
-    "defence_entry_threshold": 0.2,
+    "defence_entry_threshold": 0.175,
     "defence_entry_confirm_frames": 3,
     "defence_route_mode_override": "auto",
     "defence_route_record_hotkey_start": "p",
