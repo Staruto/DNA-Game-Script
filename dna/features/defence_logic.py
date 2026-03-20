@@ -229,6 +229,7 @@ class DefenceService:
 
         if self._is_target_hp_visible():
             state.ready_for_skill = True
+            state.replay_locked_until_restart = True
             state.replay_finished_at = 0.0
             state.validation_attempted = False
             print("[INFO] Defence target point confirmed by protect HP bar. Entering skill-only phase.")
@@ -306,6 +307,8 @@ class DefenceService:
 
     def _arm_auto_replay_if_ready(self, now: float, state: DefenceState):
         if state.route_mode != "playback" or state.current_variant is None:
+            return
+        if state.replay_locked_until_restart:
             return
         if state.replay_finished_at > 0.0 or state.validation_attempted or state.recovery_active:
             return

@@ -131,13 +131,13 @@ class PersistentLauncher:
         control_frame = ttk.Frame(container)
         control_frame.pack(fill="x", pady=(10, 8))
 
-        self.start_stop_btn = ttk.Button(control_frame, text="Start", command=self._on_start_stop)
+        self.start_stop_btn = ttk.Button(control_frame, text="Start", width=10, command=self._on_start_stop)
         self.start_stop_btn.pack(side="left")
 
         self.clear_logs_btn = ttk.Button(control_frame, text="Clear Logs", command=self._clear_logs)
         self.clear_logs_btn.pack(side="left", padx=(8, 0))
 
-        self.status_label = ttk.Label(control_frame, textvariable=self.status_var)
+        self.status_label = ttk.Label(control_frame, textvariable=self.status_var, width=30, anchor="w")
         self.status_label.pack(side="left", padx=(12, 0))
 
         logs_frame = ttk.LabelFrame(container, text="Logs", padding=8)
@@ -339,7 +339,7 @@ class PersistentLauncher:
 
     def _on_start_stop(self):
         if self._runner.is_running():
-            self.status_var.set("Stopping safely...")
+            self.status_var.set("Stopping")
             self._append_log("[INFO] Stop requested. Waiting for safe shutdown...")
             self._runner.request_stop()
             return
@@ -491,7 +491,7 @@ class PersistentLauncher:
     def _on_close(self):
         if self._runner.is_running():
             self._closing = True
-            self.status_var.set("Stopping safely before exit...")
+            self.status_var.set("Stopping")
             self._append_log("[INFO] Window close requested. Stopping current run first...", tag="warn")
             self._runner.request_stop()
             return

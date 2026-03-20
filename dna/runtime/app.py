@@ -138,6 +138,7 @@ class DNAApp:
         defence_state = DefenceState()
         defence_success_runs = 0
         defence_ready_prev = False
+        non_defence_streak = 0
         record_state = RouteRecordingState(
             key_state={key: False for key in ROUTE_RECORD_KEYS},
             mouse_button_state={"left": False, "right": False},
@@ -246,6 +247,7 @@ class DNAApp:
                         continue
 
                 if active_profile.key == "defence":
+                    non_defence_streak = 0
                     entry_logged_before = defence_state.entry_detected_logged
                     update_interval = float(self.config.get("defence_check_interval", 0.22))
                     if defence_state.replay_active:
@@ -282,9 +284,22 @@ class DNAApp:
                         time.sleep(sleep_interval)
                         continue
                 else:
-                    defence_ready_prev = False
-                    self.controller.release_keys(ROUTE_RECORD_KEYS)
-                    self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=True)
+                    non_defence_streak += 1
+                    exit_confirm_frames = max(1, int(self.config.get("defence_exit_confirm_frames", 12)))
+                    if defence_state.replay_locked_until_restart:
+                        locked_confirm_frames = max(
+                            exit_confirm_frames,
+                            int(self.config.get("defence_exit_confirm_frames_locked", 180)),
+                        )
+                        exit_confirm_frames = locked_confirm_frames
+                    if non_defence_streak >= exit_confirm_frames:
+                        defence_ready_prev = False
+                        self.controller.release_keys(ROUTE_RECORD_KEYS)
+                        self.route_manager.reset_defence_state(
+                            defence_state,
+                            pending_replay_after_delay=False,
+                            clear_variant=True,
+                        )
 
                 loot_approaching = False
                 if active_profile.key != "defence":

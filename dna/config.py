@@ -74,6 +74,8 @@ DEFAULT_CONFIG = {
     "defence_route_replay_after_load_delay_sec": 1.5,
     "defence_check_interval": 0.22,
     "defence_replay_tick_interval": 0.01,
+    "defence_exit_confirm_frames": 12,
+    "defence_exit_confirm_frames_locked": 180,
     "defence_route_mouse_scale": 0.71,
     "defence_target_hp_template": "defence_hp.png",
     "defence_target_hp_threshold": 0.78,

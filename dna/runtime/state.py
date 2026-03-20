@@ -44,6 +44,7 @@ class DefenceState:
     recovery_retry_count: int = 0
     recovery_notice_count: int = 0
     popup_detected_logged: bool = False
+    replay_locked_until_restart: bool = False
 
 
 @dataclass
