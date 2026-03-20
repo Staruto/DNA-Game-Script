@@ -329,6 +329,8 @@ class DefenceService:
     def _arm_auto_replay_if_ready(self, now: float, state: DefenceState):
         if state.route_mode != "playback" or state.current_variant is None:
             return
+        if state.replay_finished_at > 0.0 or state.validation_attempted or state.recovery_active:
+            return
         if state.ready_for_skill or state.replay_active or state.replay_pending_until > 0.0:
             return
 
@@ -546,6 +548,12 @@ class DefenceService:
         if self.resolve_variant(now, state) is None:
             state.last_update_ts = now
             return True
+
+        if state.replay_finished_at > 0.0 or state.recovery_active:
+            validation_or_recovery = self._validate_arrival_or_recover(now, state)
+            if validation_or_recovery:
+                state.last_update_ts = now
+                return True
 
         self._arm_auto_replay_if_ready(now, state)
 
