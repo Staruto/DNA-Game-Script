@@ -46,7 +46,9 @@ class PersistentLauncher:
         container = ttk.Frame(self.root, padding=12)
         container.pack(fill="both", expand=True)
 
-        self.notebook = ttk.Notebook(container)
+        style = ttk.Style(self.root)
+        style.configure("Launcher.TNotebook.Tab", padding=(18, 10), font=("Segoe UI", 11, "bold"))
+        self.notebook = ttk.Notebook(container, style="Launcher.TNotebook")
         self.notebook.pack(fill="x")
 
         general_tab = ttk.Frame(self.notebook, padding=10)
@@ -143,10 +145,11 @@ class PersistentLauncher:
 
         self.log_text = scrolledtext.ScrolledText(logs_frame, wrap="word", state="disabled", font=("Consolas", 10))
         self.log_text.pack(fill="both", expand=True)
-        self.log_text.tag_configure("info", foreground="#d6d6d6")
-        self.log_text.tag_configure("warn", foreground="#ffcc66")
-        self.log_text.tag_configure("error", foreground="#ff7b7b")
-        self.log_text.tag_configure("summary", foreground="#77ffd4")
+        self.log_text.configure(background="#ffffff", foreground="#111111", insertbackground="#111111")
+        self.log_text.tag_configure("info", foreground="#111111")
+        self.log_text.tag_configure("warn", foreground="#8a5a00")
+        self.log_text.tag_configure("error", foreground="#9f1239")
+        self.log_text.tag_configure("summary", foreground="#0f5132")
 
         self._last_selected_dungeon = str(initial_config.get("manual_dungeon", "defence"))
         self._last_defence_success = 0
@@ -410,6 +413,14 @@ class PersistentLauncher:
             tag="summary",
         )
 
+    def _target_object_text(self, mode: str, manual: str) -> str:
+        if mode != "manual":
+            return "auto"
+        if manual == "defence":
+            variant = self._active_variant_key.strip()
+            return f"defence/{variant}" if variant else "defence"
+        return manual
+
     def _handle_event(self, event: dict):
         event_type = event.get("type")
         if event_type == "log":
@@ -432,7 +443,8 @@ class PersistentLauncher:
                 if self.compact_log_var.get():
                     mode_desc = f"manual:{manual}" if mode == "manual" else "auto"
                     target_desc = "unlimited" if target == 0 else str(target)
-                    self._append_log(f"[START] mode={mode_desc} target_runs={target_desc}", tag="info")
+                    target_obj = self._target_object_text(mode, manual)
+                    self._append_log(f"[START] target={target_obj} mode={mode_desc} target_runs={target_desc}", tag="info")
                 else:
                     self._append_log(f"[INFO] Session started. mode={mode} manual={manual} target_runs={target}", tag="info")
             elif name == "run_completed":
@@ -446,6 +458,8 @@ class PersistentLauncher:
                 if self.compact_log_var.get():
                     dungeon = str(payload.get("dungeon_type", "unknown"))
                     variant = str(payload.get("variant", "")).strip()
+                    if dungeon == "defence" and not variant:
+                        variant = self._active_variant_key.strip()
                     if variant:
                         self._append_log(f"[EVENT] Entered {dungeon} ({variant}).", tag="info")
                     else:

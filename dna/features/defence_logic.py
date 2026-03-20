@@ -291,40 +291,18 @@ class DefenceService:
                 best_score = float(max_score)
                 best_variant = str(variant_key)
 
-        threshold = float(self.config.get("defence_entry_threshold", 0.22))
         if debug_enabled:
-            print(f"[DEBUG] defence entry best_variant={best_variant} score={best_score:.3f} threshold={threshold:.3f}")
-        if best_variant is None or best_score < threshold:
+            print(f"[DEBUG] defence entry best_variant={best_variant} score={best_score:.3f}")
+        if best_variant is None:
             return None, best_score
         return best_variant, best_score
 
     def _detect_entry_ready_for_variant(self, variant_key: str) -> bool:
-        region = self.config.get("defence_entry_region")
-        variants = self._get_defence_variants()
-        variant = variants.get(variant_key, {}) if isinstance(variants, dict) else {}
-        template_name = str(variant.get("entry_template", "")).strip() if isinstance(variant, dict) else ""
-        if region is None or not template_name:
-            return False
-
-        template = self.templates.load_gray(template_name)
-        if template is None:
-            return False
-
-        gray = self.capture.grab_gray(region)
-        if gray is None or gray.size == 0:
-            return False
-
-        if template.shape[:2] != gray.shape[:2]:
-            resized_template = cv2.resize(template, (gray.shape[1], gray.shape[0]), interpolation=cv2.INTER_LINEAR)
-        else:
-            resized_template = template
-
-        result = cv2.matchTemplate(gray, resized_template, cv2.TM_CCOEFF_NORMED)
-        _, max_score, _, _ = cv2.minMaxLoc(result)
-        threshold = float(self.config.get("defence_entry_threshold", 0.22))
+        matched_variant, best_score = self._detect_best_entry_variant()
         if bool(self.config.get("debug_defence", False)):
-            print(f"[DEBUG] defence entry confirm variant={variant_key} score={float(max_score):.3f} threshold={threshold:.3f}")
-        return bool(float(max_score) >= threshold)
+            score_text = "n/a" if best_score is None else f"{float(best_score):.3f}"
+            print(f"[DEBUG] defence entry confirm current={variant_key} best={matched_variant} score={score_text}")
+        return bool(matched_variant and matched_variant == variant_key)
 
     def _arm_auto_replay_if_ready(self, now: float, state: DefenceState):
         if state.route_mode != "playback" or state.current_variant is None:
