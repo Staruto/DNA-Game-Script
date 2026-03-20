@@ -9,7 +9,6 @@ from dna.defence.variant_store import load_variants, save_variants
 from dna.gui.runner import AppRunner
 from dna.settings import ALLOWED_MANUAL_DUNGEONS, normalize_runtime_settings, save_settings_overrides
 
-
 MAX_LOG_LINES = 2000
 
 
@@ -19,6 +18,7 @@ class PersistentLauncher:
         self._runner = AppRunner()
         self._closing = False
         self._log_lines = 0
+        self._last_detected_variant = ""
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -28,8 +28,8 @@ class PersistentLauncher:
 
         self.root = tk.Tk()
         self.root.title("DNA Launcher")
-        self.root.geometry("980x680")
-        self.root.minsize(860, 560)
+        self.root.geometry("980x700")
+        self.root.minsize(900, 580)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.mode_var = tk.StringVar(value=str(initial_config.get("dungeon_mode", "auto")))
@@ -38,10 +38,10 @@ class PersistentLauncher:
         self.compact_log_var = tk.BooleanVar(value=bool(initial_config.get("compact_log_enabled", True)))
         self.status_var = tk.StringVar(value="Idle")
 
-        self.variant_key_var = tk.StringVar(value="")
         self.variant_name_var = tk.StringVar(value="")
-        self.variant_template_var = tk.StringVar(value="")
-        self.variant_route_var = tk.StringVar(value="")
+        self.auto_detect_defence_var = tk.BooleanVar(value=bool(initial_config.get("auto_detect_defence", True)))
+        self.manual_variant_var = tk.StringVar(value=self._active_variant_key)
+        self.route_mode_var = tk.StringVar(value=str(initial_config.get("defence_route_mode_override", "auto")))
 
         container = ttk.Frame(self.root, padding=12)
         container.pack(fill="both", expand=True)
@@ -60,13 +60,7 @@ class PersistentLauncher:
         self.notebook.add(defence_tab, text="Defence")
 
         ttk.Label(general_tab, text="Dungeon Mode").grid(row=0, column=0, sticky="w", pady=(0, 6), padx=(0, 10))
-        self.mode_combo = ttk.Combobox(
-            general_tab,
-            textvariable=self.mode_var,
-            state="readonly",
-            values=("auto", "manual"),
-            width=16,
-        )
+        self.mode_combo = ttk.Combobox(general_tab, textvariable=self.mode_var, state="readonly", values=("auto", "manual"), width=16)
         self.mode_combo.grid(row=0, column=1, sticky="w", pady=(0, 6))
         self.mode_combo.bind("<<ComboboxSelected>>", self._on_mode_changed)
 
@@ -106,17 +100,33 @@ class PersistentLauncher:
         form_frame = ttk.LabelFrame(defence_top, text="Variant Details", padding=8)
         form_frame.pack(side="left", fill="both", expand=True)
 
-        ttk.Label(form_frame, text="Key").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        ttk.Entry(form_frame, textvariable=self.variant_key_var, width=30).grid(row=0, column=1, sticky="w", pady=(0, 6))
+        ttk.Label(form_frame, text="Variant Name").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        ttk.Entry(form_frame, textvariable=self.variant_name_var, width=30).grid(row=0, column=1, sticky="w", pady=(0, 6))
 
-        ttk.Label(form_frame, text="Display Name").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        ttk.Entry(form_frame, textvariable=self.variant_name_var, width=30).grid(row=1, column=1, sticky="w", pady=(0, 6))
+        ttk.Label(form_frame, text="Defence Variant Mode").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        self.auto_detect_check = ttk.Checkbutton(
+            form_frame,
+            text="Auto detect by entry screen",
+            variable=self.auto_detect_defence_var,
+            command=self._on_auto_detect_changed,
+        )
+        self.auto_detect_check.grid(row=1, column=1, sticky="w", pady=(0, 6))
 
-        ttk.Label(form_frame, text="Entry Template").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        ttk.Entry(form_frame, textvariable=self.variant_template_var, width=30).grid(row=2, column=1, sticky="w", pady=(0, 6))
+        ttk.Label(form_frame, text="Manual Target Variant").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        self.manual_variant_combo = ttk.Combobox(form_frame, textvariable=self.manual_variant_var, state="readonly", width=30)
+        self.manual_variant_combo.grid(row=2, column=1, sticky="w", pady=(0, 6))
+        self.manual_variant_combo.bind("<<ComboboxSelected>>", self._on_manual_variant_changed)
 
-        ttk.Label(form_frame, text="Route Name").grid(row=3, column=0, sticky="w", padx=(0, 8))
-        ttk.Entry(form_frame, textvariable=self.variant_route_var, width=30).grid(row=3, column=1, sticky="w")
+        ttk.Label(form_frame, text="Route Mode").grid(row=3, column=0, sticky="w", padx=(0, 8))
+        self.route_mode_combo = ttk.Combobox(
+            form_frame,
+            textvariable=self.route_mode_var,
+            state="readonly",
+            values=("auto", "playback", "record"),
+            width=30,
+        )
+        self.route_mode_combo.grid(row=3, column=1, sticky="w")
+        self.route_mode_combo.bind("<<ComboboxSelected>>", self._on_route_mode_changed)
 
         buttons_frame = ttk.Frame(form_frame)
         buttons_frame.grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
@@ -124,6 +134,7 @@ class PersistentLauncher:
         ttk.Button(buttons_frame, text="Save Variant", command=self._save_variant).pack(side="left")
         ttk.Button(buttons_frame, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
         ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant).pack(side="left", padx=(6, 0))
+        ttk.Button(buttons_frame, text="Refresh Checks", command=self._refresh_checks).pack(side="left", padx=(6, 0))
 
         self.variant_hint_label = ttk.Label(defence_tab, text="")
         self.variant_hint_label.pack(anchor="w", pady=(6, 0))
@@ -158,6 +169,7 @@ class PersistentLauncher:
         self._append_log("[INFO] Launcher ready. Configure and click Start.", tag="info")
         self._on_mode_changed()
         self._on_manual_dungeon_changed()
+        self._on_auto_detect_changed()
         self._poll_events()
 
     def _append_log(self, line: str, tag: str = "info"):
@@ -176,22 +188,41 @@ class PersistentLauncher:
         self.log_text.configure(state="disabled")
         self._log_lines = 0
 
+    def _normalize_variant_key(self, text: str) -> str:
+        safe = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in text.strip().lower())
+        return safe.strip("_")
+
+    def _selected_variant_key_from_list(self) -> Optional[str]:
+        selected = self.variant_list.curselection()
+        if not selected:
+            return None
+        keys = sorted(self._variants.keys())
+        index = int(selected[0])
+        if index < 0 or index >= len(keys):
+            return None
+        return keys[index]
+
     def _refresh_variant_list(self, select_key: Optional[str] = None):
         self.variant_list.delete(0, "end")
-        keys = list(sorted(self._variants.keys()))
+        keys = sorted(self._variants.keys())
+
         for key in keys:
-            display_name = self._variants[key].get("display_name", key)
+            display_name = str(self._variants.get(key, {}).get("display_name", key))
             marker = "*" if key == self._active_variant_key else " "
             self.variant_list.insert("end", f"{marker} {key} - {display_name}")
 
+        self.manual_variant_combo.configure(values=tuple(keys))
+
         if not keys:
+            self.variant_name_var.set("")
+            self.manual_variant_var.set("")
             self.variant_hint_label.configure(text="No variants configured yet.")
-            self._fill_variant_form(None)
             return
 
         if not select_key or select_key not in self._variants:
             select_key = keys[0]
 
+        self.manual_variant_var.set(select_key)
         index = keys.index(select_key)
         self.variant_list.selection_clear(0, "end")
         self.variant_list.selection_set(index)
@@ -200,87 +231,79 @@ class PersistentLauncher:
 
     def _fill_variant_form(self, key: Optional[str]):
         if not key or key not in self._variants:
-            self.variant_key_var.set("")
             self.variant_name_var.set("")
-            self.variant_template_var.set("")
-            self.variant_route_var.set("")
             self.variant_hint_label.configure(text="")
             return
 
         item = self._variants[key]
-        self.variant_key_var.set(key)
         self.variant_name_var.set(str(item.get("display_name", key)))
-        self.variant_template_var.set(str(item.get("entry_template", "")))
-        self.variant_route_var.set(str(item.get("route_name", key)))
+        self.manual_variant_var.set(key)
+        self._refresh_checks()
 
-        route_name = str(item.get("route_name", key))
-        route_path = defence_route_path(route_name)
+    def _refresh_checks(self):
+        key = self.manual_variant_var.get().strip() or self._selected_variant_key_from_list()
+        if not key or key not in self._variants:
+            self.variant_hint_label.configure(text="")
+            return
+
+        item = self._variants[key]
         template_name = str(item.get("entry_template", "")).strip()
+        route_name = str(item.get("route_name", key)).strip() or key
+
         template_exists = bool(template_name and template_path(template_name) is not None)
+        route_path = defence_route_path(route_name)
         route_exists = route_path.exists()
+
+        selected_mode = self.route_mode_var.get().strip().lower() or "auto"
+        if selected_mode == "auto":
+            effective_mode = "playback" if route_exists else "record"
+        else:
+            effective_mode = selected_mode
+
         self.variant_hint_label.configure(
-            text=f"Template: {'OK' if template_exists else 'Missing'} | Route: {'OK' if route_exists else 'Missing'}"
+            text=(
+                f"Variant={key} | Template: {'OK' if template_exists else 'Missing'} ({template_name or 'n/a'})"
+                f" | Route: {'OK' if route_exists else 'Missing'} ({route_path.name})"
+                f" | Effective mode: {effective_mode}"
+            )
         )
 
-    def _selected_variant_key_from_list(self) -> Optional[str]:
-        selected = self.variant_list.curselection()
-        if not selected:
-            return None
-        keys = list(sorted(self._variants.keys()))
-        index = int(selected[0])
-        if index < 0 or index >= len(keys):
-            return None
-        return keys[index]
-
-    def _normalize_variant_key(self, key: str) -> str:
-        text = key.strip().lower()
-        safe = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in text)
-        return safe.strip("_")
-
     def _save_variant(self):
-        key = self._normalize_variant_key(self.variant_key_var.get())
-        display_name = self.variant_name_var.get().strip()
-        entry_template = self.variant_template_var.get().strip()
-        route_name = self.variant_route_var.get().strip()
-
+        raw_name = self.variant_name_var.get().strip()
+        key = self._normalize_variant_key(raw_name)
         if not key:
-            messagebox.showerror("Invalid Variant", "Variant key is required.")
+            messagebox.showerror("Invalid Variant", "Variant name is required.")
             return
-        if not display_name:
-            messagebox.showerror("Invalid Variant", "Display name is required.")
-            return
-        if not entry_template:
-            messagebox.showerror("Invalid Variant", "Entry template is required.")
-            return
-        if not route_name:
-            messagebox.showerror("Invalid Variant", "Route name is required.")
-            return
+
+        entry_template = f"{key}.png"
+        route_name = key
 
         if template_path(entry_template) is None:
             proceed = messagebox.askyesno(
                 "Template Missing",
-                "Entry template file is not found in assets or workspace. Save anyway?",
+                f"Expected template '{entry_template}' was not found. Save anyway?",
             )
             if not proceed:
                 return
 
         self._variants[key] = {
-            "display_name": display_name,
+            "display_name": raw_name or key,
             "entry_template": entry_template,
             "route_name": route_name,
         }
+        self._active_variant_key = key
+        self.manual_variant_var.set(key)
         save_variants(self._variants)
         self._append_log(f"[INFO] Defence variant saved: {key}", tag="info")
         self._refresh_variant_list(select_key=key)
 
     def _delete_variant(self):
-        key = self._selected_variant_key_from_list() or self._normalize_variant_key(self.variant_key_var.get())
+        key = self._selected_variant_key_from_list() or self.manual_variant_var.get().strip()
         if not key or key not in self._variants:
             messagebox.showerror("Delete Variant", "Please select a valid variant first.")
             return
 
-        confirmed = messagebox.askyesno("Delete Variant", f"Delete defence variant '{key}'?")
-        if not confirmed:
+        if not messagebox.askyesno("Delete Variant", f"Delete defence variant '{key}'?"):
             return
 
         del self._variants[key]
@@ -291,17 +314,36 @@ class PersistentLauncher:
         self._refresh_variant_list(select_key=self._active_variant_key)
 
     def _set_active_variant(self):
-        key = self._selected_variant_key_from_list() or self._normalize_variant_key(self.variant_key_var.get())
+        key = self._selected_variant_key_from_list() or self.manual_variant_var.get().strip()
         if not key or key not in self._variants:
             messagebox.showerror("Set Active Variant", "Please select a valid variant first.")
             return
+
         self._active_variant_key = key
+        self.manual_variant_var.set(key)
         self._append_log(f"[INFO] Active defence variant: {key}", tag="info")
         self._refresh_variant_list(select_key=key)
 
     def _on_variant_selected(self, _event=None):
         key = self._selected_variant_key_from_list()
         self._fill_variant_form(key)
+
+    def _on_auto_detect_changed(self):
+        if self.auto_detect_defence_var.get():
+            self.manual_variant_combo.configure(state="disabled")
+        else:
+            self.manual_variant_combo.configure(state="readonly")
+        self._refresh_checks()
+
+    def _on_manual_variant_changed(self, _event=None):
+        selected = self.manual_variant_var.get().strip()
+        if selected in self._variants:
+            self._active_variant_key = selected
+            self._refresh_variant_list(select_key=selected)
+            self._refresh_checks()
+
+    def _on_route_mode_changed(self, _event=None):
+        self._refresh_checks()
 
     def _on_mode_changed(self, _event=None):
         mode = self.mode_var.get().strip().lower()
@@ -323,6 +365,9 @@ class PersistentLauncher:
             "manual_dungeon": self.manual_var.get().strip().lower(),
             "target_runs": self.target_runs_var.get().strip(),
             "compact_log_enabled": self.compact_log_var.get(),
+            "auto_detect_defence": self.auto_detect_defence_var.get(),
+            "manual_defence_variant": self.manual_variant_var.get().strip(),
+            "defence_route_mode_override": self.route_mode_var.get().strip().lower(),
         }
 
         try:
@@ -334,6 +379,9 @@ class PersistentLauncher:
         normalized = normalize_runtime_settings(candidate, self._initial)
         if candidate["dungeon_mode"] == "manual" and normalized["manual_dungeon"] not in ALLOWED_MANUAL_DUNGEONS:
             messagebox.showerror("Invalid Setting", "manual_dungeon must be defence or expulsion.")
+            return None
+        if not normalized["auto_detect_defence"] and not normalized["manual_defence_variant"]:
+            messagebox.showerror("Invalid Defence Setting", "Please select a manual defence variant.")
             return None
         return normalized
 
@@ -347,6 +395,7 @@ class PersistentLauncher:
         selected = self._collect_settings()
         if selected is None:
             return
+
         if selected["manual_dungeon"] == "defence" and not self._variants:
             messagebox.showerror("Missing Defence Variant", "Please create at least one defence variant before starting defence mode.")
             return
@@ -354,7 +403,10 @@ class PersistentLauncher:
         runtime_config = get_default_config()
         runtime_config.update(selected)
         runtime_config["defence_variants"] = dict(self._variants)
-        runtime_config["manual_defence_variant"] = self._active_variant_key
+        runtime_config["manual_defence_variant"] = selected["manual_defence_variant"] or self._active_variant_key
+        runtime_config["auto_detect_defence"] = bool(selected["auto_detect_defence"])
+        runtime_config["defence_route_mode_override"] = selected["defence_route_mode_override"]
+
         save_settings_overrides(selected, get_default_config())
 
         if not self._runner.start(runtime_config):
@@ -363,6 +415,7 @@ class PersistentLauncher:
 
         self._last_selected_dungeon = selected["manual_dungeon"]
         self._last_defence_success = 0
+        self._last_detected_variant = ""
         if not self.compact_log_var.get():
             self._append_log("[INFO] Run started.", tag="info")
             if selected["dungeon_mode"] == "manual":
@@ -397,6 +450,7 @@ class PersistentLauncher:
         defence_success = int(payload.get("defence_success_runs", self._last_defence_success))
         elapsed_text = f"{int(elapsed)}s"
         is_defence = self._last_selected_dungeon == "defence"
+
         if is_defence:
             rate = (defence_success / runs * 100.0) if runs > 0 else 0.0
             avg_success = (elapsed / defence_success) if defence_success > 0 else None
@@ -408,16 +462,15 @@ class PersistentLauncher:
             return
 
         avg = (elapsed / runs) if runs > 0 else 0.0
-        self._append_log(
-            f"[SUMMARY] Runs={runs} total_time={elapsed_text} avg_per_run={avg:.1f}s",
-            tag="summary",
-        )
+        self._append_log(f"[SUMMARY] Runs={runs} total_time={elapsed_text} avg_per_run={avg:.1f}s", tag="summary")
 
     def _target_object_text(self, mode: str, manual: str) -> str:
         if mode != "manual":
             return "auto"
         if manual == "defence":
-            variant = self._active_variant_key.strip()
+            if self.auto_detect_defence_var.get():
+                return "defence/auto"
+            variant = self.manual_variant_var.get().strip() or self._active_variant_key.strip()
             return f"defence/{variant}" if variant else "defence"
         return manual
 
@@ -459,8 +512,9 @@ class PersistentLauncher:
                     dungeon = str(payload.get("dungeon_type", "unknown"))
                     variant = str(payload.get("variant", "")).strip()
                     if dungeon == "defence" and not variant:
-                        variant = self._active_variant_key.strip()
+                        variant = self.manual_variant_var.get().strip() or self._active_variant_key.strip()
                     if variant:
+                        self._last_detected_variant = variant
                         self._append_log(f"[EVENT] Entered {dungeon} ({variant}).", tag="info")
                     else:
                         self._append_log(f"[EVENT] Entered {dungeon}.", tag="info")
