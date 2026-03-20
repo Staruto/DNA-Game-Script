@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
     "dungeon_detect_scales": [0.9, 0.95, 1.0, 1.05, 1.1],
     "debug_dungeon_detection": False,
     "target_runs": 0,
+    "compact_log_enabled": True,
     "enable_run_stats": True,
     "skill_check_interval": 1.2,
     "skill_state_confirm_frames": 2,

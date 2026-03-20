@@ -147,6 +147,7 @@ class DNAApp:
                 str(self.config.get("defence_route_replay_hotkey", "i")).lower(): False,
             },
         )
+        last_profile_key = ""
 
         while True:
             try:
@@ -179,6 +180,16 @@ class DNAApp:
                     continue
 
                 active_profile = self.dungeon_detector.get_active_profile(self.capture)
+                if active_profile.key != last_profile_key:
+                    last_profile_key = active_profile.key
+                    self._emit_event(
+                        on_event,
+                        "dungeon_entered",
+                        {
+                            "dungeon_type": active_profile.key,
+                            "runs_completed": session.runs_completed,
+                        },
+                    )
 
                 if active_profile.key == "defence" or record_state.active or defence_state.route_mode == "record":
                     self.defence_service.process_hotkeys(record_state, defence_state)
@@ -195,6 +206,14 @@ class DNAApp:
                     session.last_result_check = now
                     result_action = self.result_ui.check_and_click_result_ui(active_profile)
                     if result_action == "start_clicked":
+                        self._emit_event(
+                            on_event,
+                            "run_restarted",
+                            {
+                                "dungeon_type": active_profile.key,
+                                "runs_completed": session.runs_completed,
+                            },
+                        )
                         self.controller.release_keys(ROUTE_RECORD_KEYS)
                         self.route_manager.reset_defence_state(
                             defence_state,
@@ -227,6 +246,7 @@ class DNAApp:
                         continue
 
                 if active_profile.key == "defence":
+                    entry_logged_before = defence_state.entry_detected_logged
                     update_interval = float(self.config.get("defence_check_interval", 0.22))
                     if defence_state.replay_active:
                         update_interval = float(self.config.get("defence_replay_tick_interval", 0.01))
@@ -234,6 +254,17 @@ class DNAApp:
                         defence_active = self.defence_service.update(now, defence_state)
                     else:
                         defence_active = self.defence_service.is_prephase_active(defence_state)
+
+                    if defence_state.entry_detected_logged and not entry_logged_before:
+                        self._emit_event(
+                            on_event,
+                            "dungeon_entered",
+                            {
+                                "dungeon_type": "defence",
+                                "variant": defence_state.current_variant,
+                                "runs_completed": session.runs_completed,
+                            },
+                        )
 
                     if defence_state.ready_for_skill and not defence_ready_prev:
                         defence_success_runs += 1

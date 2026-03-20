@@ -35,19 +35,35 @@ def _normalize_target_runs(value: Any, fallback: int) -> int:
     return parsed
 
 
+def _normalize_bool(value: Any, fallback: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return fallback
+
+
 def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) -> Dict[str, Any]:
     fallback_mode = _normalize_mode(base.get("dungeon_mode", "auto"), "auto")
     fallback_manual = _normalize_manual_dungeon(base.get("manual_dungeon", "defence"), "defence")
     fallback_runs = _normalize_target_runs(base.get("target_runs", 0), 0)
+    fallback_compact_log = _normalize_bool(base.get("compact_log_enabled", True), True)
 
     mode = _normalize_mode(raw.get("dungeon_mode", fallback_mode), fallback_mode)
     manual = _normalize_manual_dungeon(raw.get("manual_dungeon", fallback_manual), fallback_manual)
     target_runs = _normalize_target_runs(raw.get("target_runs", fallback_runs), fallback_runs)
+    compact_log_enabled = _normalize_bool(raw.get("compact_log_enabled", fallback_compact_log), fallback_compact_log)
 
     return {
         "dungeon_mode": mode,
         "manual_dungeon": manual,
         "target_runs": target_runs,
+        "compact_log_enabled": compact_log_enabled,
     }
 
 
