@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import Callable, Optional
 
 from dna.config import get_default_config
 from dna.features.defence_logic import DefenceService
@@ -28,6 +29,14 @@ class DNAApp:
         self.result_ui = ResultUIService(self.config, self.capture, self.templates, self.controller)
         self.loot_service = LootService(self.config, self.capture, self.templates, self.controller)
         self.defence_service = DefenceService(self.config, self.capture, self.templates, self.controller, self.route_manager)
+
+    def _emit_event(self, on_event: Optional[Callable[[str, dict], None]], event_name: str, payload: Optional[dict] = None):
+        if on_event is None:
+            return
+        try:
+            on_event(event_name, payload or {})
+        except Exception:
+            return
 
     def _format_duration(self, seconds: float) -> str:
         seconds = max(0, int(seconds))
@@ -86,7 +95,11 @@ class DNAApp:
         elif not isinstance(keywords, list):
             self.config["game_window_keywords"] = ["Duet Night Abyss", "Abyss"]
 
-    def run(self):
+    def run(
+        self,
+        should_stop: Optional[Callable[[], bool]] = None,
+        on_event: Optional[Callable[[str, dict], None]] = None,
+    ):
         self._validate_runtime_config()
 
         print("[INFO] Duet Night Abyss helper started.")
@@ -107,12 +120,24 @@ class DNAApp:
         else:
             print("[INFO] Target runs this session: unlimited")
 
+        self._emit_event(
+            on_event,
+            "session_started",
+            {
+                "mode": mode,
+                "manual_dungeon": manual_profile.key,
+                "target_runs": target_runs,
+            },
+        )
+
         print("[INFO] Switch to the game window. Starting in 3 seconds...")
         time.sleep(3)
 
         session = SessionState(session_start_ts=time.time())
         loot_state = LootState()
         defence_state = DefenceState()
+        defence_success_runs = 0
+        defence_ready_prev = False
         record_state = RouteRecordingState(
             key_state={key: False for key in ROUTE_RECORD_KEYS},
             mouse_button_state={"left": False, "right": False},
@@ -126,6 +151,25 @@ class DNAApp:
         while True:
             try:
                 now = time.time()
+
+                if should_stop is not None and should_stop():
+                    self.route_manager.stop_recording(record_state, save=False)
+                    self.controller.release_keys(ROUTE_RECORD_KEYS)
+                    self._print_session_summary(session)
+                    if defence_success_runs > 0:
+                        print(f"[INFO] Defence success runs: {defence_success_runs}")
+                    self._emit_event(
+                        on_event,
+                        "session_finished",
+                        {
+                            "runs_completed": session.runs_completed,
+                            "elapsed_sec": max(0.0, time.time() - session.session_start_ts),
+                            "defence_success_runs": defence_success_runs,
+                            "stopped_by_user": True,
+                        },
+                    )
+                    print("[INFO] Script stopped by GUI request.")
+                    break
 
                 if record_state.exit_requested:
                     print("[INFO] Recording finished. Exiting.")
@@ -159,8 +203,26 @@ class DNAApp:
                         )
                         session.runs_completed += 1
                         self._print_run_stats(session)
+                        self._emit_event(
+                            on_event,
+                            "run_completed",
+                            {
+                                "runs_completed": session.runs_completed,
+                                "target_runs": target_runs,
+                            },
+                        )
                         if target_runs > 0 and session.runs_completed >= target_runs:
                             self._print_session_summary(session)
+                            self._emit_event(
+                                on_event,
+                                "session_finished",
+                                {
+                                    "runs_completed": session.runs_completed,
+                                    "elapsed_sec": max(0.0, time.time() - session.session_start_ts),
+                                    "defence_success_runs": defence_success_runs,
+                                    "stopped_by_user": False,
+                                },
+                            )
                             break
                         continue
 
@@ -172,6 +234,16 @@ class DNAApp:
                         defence_active = self.defence_service.update(now, defence_state)
                     else:
                         defence_active = self.defence_service.is_prephase_active(defence_state)
+
+                    if defence_state.ready_for_skill and not defence_ready_prev:
+                        defence_success_runs += 1
+                        self._emit_event(
+                            on_event,
+                            "defence_success",
+                            {"defence_success_runs": defence_success_runs},
+                        )
+                    defence_ready_prev = defence_state.ready_for_skill
+
                     if defence_active:
                         sleep_interval = 0.02
                         if defence_state.replay_active:
@@ -179,6 +251,7 @@ class DNAApp:
                         time.sleep(sleep_interval)
                         continue
                 else:
+                    defence_ready_prev = False
                     self.controller.release_keys(ROUTE_RECORD_KEYS)
                     self.route_manager.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=True)
 
@@ -234,5 +307,15 @@ class DNAApp:
                 self.route_manager.stop_recording(record_state, save=False)
                 self.controller.release_keys(ROUTE_RECORD_KEYS)
                 self._print_session_summary(session)
+                self._emit_event(
+                    on_event,
+                    "session_finished",
+                    {
+                        "runs_completed": session.runs_completed,
+                        "elapsed_sec": max(0.0, time.time() - session.session_start_ts),
+                        "defence_success_runs": defence_success_runs,
+                        "stopped_by_user": True,
+                    },
+                )
                 print("[INFO] Script stopped by user.")
                 break
