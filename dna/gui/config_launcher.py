@@ -85,6 +85,20 @@ class PersistentLauncher:
         ttk.Label(expulsion_tab, text="No extra settings for expulsion yet.").pack(anchor="w")
 
         defence_top = ttk.Frame(defence_tab)
+        defence_mode_frame = ttk.LabelFrame(defence_tab, text="Defence Mode", padding=8)
+        defence_mode_frame.pack(fill="x", pady=(0, 8))
+
+        self.auto_detect_check = ttk.Checkbutton(
+            defence_mode_frame,
+            text="Auto detect variant by entry screen",
+            variable=self.auto_detect_defence_var,
+            command=self._on_auto_detect_changed,
+        )
+        self.auto_detect_check.pack(anchor="w")
+
+        self.defence_mode_hint_label = ttk.Label(defence_mode_frame, text="")
+        self.defence_mode_hint_label.pack(anchor="w", pady=(4, 0))
+
         defence_top.pack(fill="x")
 
         list_frame = ttk.LabelFrame(defence_top, text="Defence Variants", padding=8)
@@ -103,21 +117,7 @@ class PersistentLauncher:
         ttk.Label(form_frame, text="Variant Name").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
         ttk.Entry(form_frame, textvariable=self.variant_name_var, width=30).grid(row=0, column=1, sticky="w", pady=(0, 6))
 
-        ttk.Label(form_frame, text="Defence Variant Mode").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        self.auto_detect_check = ttk.Checkbutton(
-            form_frame,
-            text="Auto detect by entry screen",
-            variable=self.auto_detect_defence_var,
-            command=self._on_auto_detect_changed,
-        )
-        self.auto_detect_check.grid(row=1, column=1, sticky="w", pady=(0, 6))
-
-        ttk.Label(form_frame, text="Manual Target Variant").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        self.manual_variant_combo = ttk.Combobox(form_frame, textvariable=self.manual_variant_var, state="readonly", width=30)
-        self.manual_variant_combo.grid(row=2, column=1, sticky="w", pady=(0, 6))
-        self.manual_variant_combo.bind("<<ComboboxSelected>>", self._on_manual_variant_changed)
-
-        ttk.Label(form_frame, text="Route Mode").grid(row=3, column=0, sticky="w", padx=(0, 8))
+        ttk.Label(form_frame, text="Route Mode").grid(row=1, column=0, sticky="w", padx=(0, 8))
         self.route_mode_combo = ttk.Combobox(
             form_frame,
             textvariable=self.route_mode_var,
@@ -125,15 +125,16 @@ class PersistentLauncher:
             values=("auto", "playback", "record"),
             width=30,
         )
-        self.route_mode_combo.grid(row=3, column=1, sticky="w")
+        self.route_mode_combo.grid(row=1, column=1, sticky="w")
         self.route_mode_combo.bind("<<ComboboxSelected>>", self._on_route_mode_changed)
 
         buttons_frame = ttk.Frame(form_frame)
-        buttons_frame.grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        buttons_frame.grid(row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         ttk.Button(buttons_frame, text="Save Variant", command=self._save_variant).pack(side="left")
         ttk.Button(buttons_frame, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
-        ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant).pack(side="left", padx=(6, 0))
+        self.set_active_btn = ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant)
+        self.set_active_btn.pack(side="left", padx=(6, 0))
         ttk.Button(buttons_frame, text="Refresh Checks", command=self._refresh_checks).pack(side="left", padx=(6, 0))
 
         self.variant_hint_label = ttk.Label(defence_tab, text="")
@@ -205,24 +206,26 @@ class PersistentLauncher:
     def _refresh_variant_list(self, select_key: Optional[str] = None):
         self.variant_list.delete(0, "end")
         keys = sorted(self._variants.keys())
+        auto_mode = self.auto_detect_defence_var.get()
 
-        for key in keys:
+        for index, key in enumerate(keys):
             display_name = str(self._variants.get(key, {}).get("display_name", key))
-            marker = "*" if key == self._active_variant_key else " "
+            marker = ">>" if (not auto_mode and key == self._active_variant_key) else "  "
             self.variant_list.insert("end", f"{marker} {key} - {display_name}")
-
-        self.manual_variant_combo.configure(values=tuple(keys))
+            if not auto_mode and key == self._active_variant_key:
+                try:
+                    self.variant_list.itemconfig(index, foreground="#0b5ed7", background="#e8f1ff", font=("Segoe UI", 10, "bold"))
+                except tk.TclError:
+                    pass
 
         if not keys:
             self.variant_name_var.set("")
-            self.manual_variant_var.set("")
             self.variant_hint_label.configure(text="No variants configured yet.")
             return
 
         if not select_key or select_key not in self._variants:
             select_key = keys[0]
 
-        self.manual_variant_var.set(select_key)
         index = keys.index(select_key)
         self.variant_list.selection_clear(0, "end")
         self.variant_list.selection_set(index)
@@ -237,11 +240,10 @@ class PersistentLauncher:
 
         item = self._variants[key]
         self.variant_name_var.set(str(item.get("display_name", key)))
-        self.manual_variant_var.set(key)
         self._refresh_checks()
 
     def _refresh_checks(self):
-        key = self.manual_variant_var.get().strip() or self._selected_variant_key_from_list()
+        key = self._selected_variant_key_from_list() or self._active_variant_key
         if not key or key not in self._variants:
             self.variant_hint_label.configure(text="")
             return
@@ -291,8 +293,8 @@ class PersistentLauncher:
             "entry_template": entry_template,
             "route_name": route_name,
         }
-        self._active_variant_key = key
-        self.manual_variant_var.set(key)
+        if not self._active_variant_key:
+            self._active_variant_key = key
         save_variants(self._variants)
         self._append_log(f"[INFO] Defence variant saved: {key}", tag="info")
         self._refresh_variant_list(select_key=key)
@@ -314,13 +316,16 @@ class PersistentLauncher:
         self._refresh_variant_list(select_key=self._active_variant_key)
 
     def _set_active_variant(self):
-        key = self._selected_variant_key_from_list() or self.manual_variant_var.get().strip()
+        if self.auto_detect_defence_var.get():
+            messagebox.showinfo("Auto Detect Enabled", "Set Active is disabled while auto detect mode is enabled.")
+            return
+
+        key = self._selected_variant_key_from_list()
         if not key or key not in self._variants:
             messagebox.showerror("Set Active Variant", "Please select a valid variant first.")
             return
 
         self._active_variant_key = key
-        self.manual_variant_var.set(key)
         self._append_log(f"[INFO] Active defence variant: {key}", tag="info")
         self._refresh_variant_list(select_key=key)
 
@@ -330,9 +335,16 @@ class PersistentLauncher:
 
     def _on_auto_detect_changed(self):
         if self.auto_detect_defence_var.get():
-            self.manual_variant_combo.configure(state="disabled")
+            self.set_active_btn.configure(state="disabled")
+            self.defence_mode_hint_label.configure(
+                text="Auto mode: variant is detected from entry screen. Set Active is disabled."
+            )
         else:
-            self.manual_variant_combo.configure(state="readonly")
+            self.set_active_btn.configure(state="normal")
+            self.defence_mode_hint_label.configure(
+                text="Manual mode: select a variant on the left, then click Set Active."
+            )
+        self._refresh_variant_list(select_key=self._selected_variant_key_from_list() or self._active_variant_key)
         self._refresh_checks()
 
     def _on_manual_variant_changed(self, _event=None):
@@ -366,7 +378,7 @@ class PersistentLauncher:
             "target_runs": self.target_runs_var.get().strip(),
             "compact_log_enabled": self.compact_log_var.get(),
             "auto_detect_defence": self.auto_detect_defence_var.get(),
-            "manual_defence_variant": self.manual_variant_var.get().strip(),
+            "manual_defence_variant": self._active_variant_key,
             "defence_route_mode_override": self.route_mode_var.get().strip().lower(),
         }
 
@@ -380,7 +392,7 @@ class PersistentLauncher:
         if candidate["dungeon_mode"] == "manual" and normalized["manual_dungeon"] not in ALLOWED_MANUAL_DUNGEONS:
             messagebox.showerror("Invalid Setting", "manual_dungeon must be defence or expulsion.")
             return None
-        if not normalized["auto_detect_defence"] and not normalized["manual_defence_variant"]:
+        if not normalized["auto_detect_defence"] and not self._active_variant_key:
             messagebox.showerror("Invalid Defence Setting", "Please select a manual defence variant.")
             return None
         return normalized
@@ -403,7 +415,7 @@ class PersistentLauncher:
         runtime_config = get_default_config()
         runtime_config.update(selected)
         runtime_config["defence_variants"] = dict(self._variants)
-        runtime_config["manual_defence_variant"] = selected["manual_defence_variant"] or self._active_variant_key
+        runtime_config["manual_defence_variant"] = self._active_variant_key
         runtime_config["auto_detect_defence"] = bool(selected["auto_detect_defence"])
         runtime_config["defence_route_mode_override"] = selected["defence_route_mode_override"]
 
@@ -470,7 +482,7 @@ class PersistentLauncher:
         if manual == "defence":
             if self.auto_detect_defence_var.get():
                 return "defence/auto"
-            variant = self.manual_variant_var.get().strip() or self._active_variant_key.strip()
+            variant = self._active_variant_key.strip()
             return f"defence/{variant}" if variant else "defence"
         return manual
 
@@ -512,7 +524,7 @@ class PersistentLauncher:
                     dungeon = str(payload.get("dungeon_type", "unknown"))
                     variant = str(payload.get("variant", "")).strip()
                     if dungeon == "defence" and not variant:
-                        variant = self.manual_variant_var.get().strip() or self._active_variant_key.strip()
+                        variant = self._active_variant_key.strip()
                     if variant:
                         self._last_detected_variant = variant
                         self._append_log(f"[EVENT] Entered {dungeon} ({variant}).", tag="info")
