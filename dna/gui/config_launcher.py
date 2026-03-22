@@ -42,6 +42,12 @@ class PersistentLauncher:
         self.root.minsize(1080, 820)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
+        self._scroll_canvas = tk.Canvas(self.root, highlightthickness=0)
+        self._scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=self._scroll_canvas.yview)
+        self._scroll_canvas.configure(yscrollcommand=self._scrollbar.set)
+        self._scrollbar.pack(side="right", fill="y")
+        self._scroll_canvas.pack(side="left", fill="both", expand=True)
+
         self.mode_var = tk.StringVar(value=str(initial_config.get("dungeon_mode", "auto")))
         self.manual_var = tk.StringVar(value=str(initial_config.get("manual_dungeon", "defence")))
         self.target_runs_var = tk.StringVar(value=str(initial_config.get("target_runs", 0)))
@@ -56,8 +62,11 @@ class PersistentLauncher:
 
         self.resource_status_var = tk.StringVar(value="No variant selected.")
 
-        container = ttk.Frame(self.root, padding=12)
-        container.pack(fill="both", expand=True)
+        container = ttk.Frame(self._scroll_canvas, padding=12)
+        self._canvas_window_id = self._scroll_canvas.create_window((0, 0), window=container, anchor="nw")
+        container.bind("<Configure>", self._on_container_configure)
+        self._scroll_canvas.bind("<Configure>", self._on_canvas_configure)
+        self.root.bind_all("<MouseWheel>", self._on_mousewheel)
 
         style = ttk.Style(self.root)
         style.configure("Launcher.TNotebook.Tab", padding=(18, 10), font=("Segoe UI", 11, "bold"))
@@ -197,19 +206,8 @@ class PersistentLauncher:
         self.route_preview_text = scrolledtext.ScrolledText(route_box, height=8, wrap="word", state="disabled", font=("Consolas", 9))
         self.route_preview_text.pack(fill="both", expand=True)
 
-        logs_frame = ttk.LabelFrame(container, text="Logs", padding=8)
-        logs_frame.pack(fill="both", expand=True, pady=(10, 8))
-
-        self.log_text = scrolledtext.ScrolledText(logs_frame, height=10, wrap="word", state="disabled", font=("Consolas", 10))
-        self.log_text.pack(fill="both", expand=True)
-        self.log_text.configure(background="#ffffff", foreground="#111111", insertbackground="#111111")
-        self.log_text.tag_configure("info", foreground="#111111")
-        self.log_text.tag_configure("warn", foreground="#8a5a00")
-        self.log_text.tag_configure("error", foreground="#9f1239")
-        self.log_text.tag_configure("summary", foreground="#0f5132")
-
         control_frame = ttk.Frame(container)
-        control_frame.pack(fill="x")
+        control_frame.pack(fill="x", pady=(10, 8))
 
         self.start_stop_btn = ttk.Button(control_frame, text="Start", width=10, command=self._on_start_stop)
         self.start_stop_btn.pack(side="left")
@@ -220,6 +218,17 @@ class PersistentLauncher:
         self.status_label = ttk.Label(control_frame, textvariable=self.status_var, width=30, anchor="w")
         self.status_label.pack(side="left", padx=(12, 0))
 
+        logs_frame = ttk.LabelFrame(container, text="Logs", padding=8)
+        logs_frame.pack(fill="both", expand=True)
+
+        self.log_text = scrolledtext.ScrolledText(logs_frame, height=12, wrap="word", state="disabled", font=("Consolas", 10))
+        self.log_text.pack(fill="both", expand=True)
+        self.log_text.configure(background="#ffffff", foreground="#111111", insertbackground="#111111")
+        self.log_text.tag_configure("info", foreground="#111111")
+        self.log_text.tag_configure("warn", foreground="#8a5a00")
+        self.log_text.tag_configure("error", foreground="#9f1239")
+        self.log_text.tag_configure("summary", foreground="#0f5132")
+
         self._last_selected_dungeon = str(initial_config.get("manual_dungeon", "defence"))
         self._last_defence_success = 0
 
@@ -229,6 +238,21 @@ class PersistentLauncher:
         self._on_manual_dungeon_changed()
         self._on_auto_detect_changed()
         self._poll_events()
+
+    def _on_container_configure(self, _event=None):
+        bbox = self._scroll_canvas.bbox("all")
+        if bbox is not None:
+            self._scroll_canvas.configure(scrollregion=bbox)
+
+    def _on_canvas_configure(self, event):
+        self._scroll_canvas.itemconfigure(self._canvas_window_id, width=event.width)
+
+    def _on_mousewheel(self, event):
+        if not self._scroll_canvas.winfo_exists():
+            return
+        delta = int(-event.delta / 120) if event.delta else 0
+        if delta != 0:
+            self._scroll_canvas.yview_scroll(delta, "units")
 
     def _append_log(self, line: str, tag: str = "info"):
         self.log_text.configure(state="normal")
