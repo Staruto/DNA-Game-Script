@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Any, Dict, Optional
 
-from dna.config import defence_route_path, get_default_config, template_path
+from dna.config import ASSETS_DIR, ROUTES_DIR, defence_route_path, get_default_config, template_path
 from dna.defence.variant_store import load_variants, save_variants
 from dna.gui.runner import AppRunner
 from dna.settings import ALLOWED_MANUAL_DUNGEONS, normalize_runtime_settings, save_settings_overrides
 
 MAX_LOG_LINES = 2000
+PREVIEW_MAX_W = 360
+PREVIEW_MAX_H = 210
 
 
 class PersistentLauncher:
@@ -19,6 +25,7 @@ class PersistentLauncher:
         self._closing = False
         self._log_lines = 0
         self._last_detected_variant = ""
+        self._image_preview_handle = None
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -28,8 +35,8 @@ class PersistentLauncher:
 
         self.root = tk.Tk()
         self.root.title("DNA Launcher")
-        self.root.geometry("980x700")
-        self.root.minsize(900, 580)
+        self.root.geometry("1080x820")
+        self.root.minsize(980, 680)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.mode_var = tk.StringVar(value=str(initial_config.get("dungeon_mode", "auto")))
@@ -40,8 +47,9 @@ class PersistentLauncher:
 
         self.variant_name_var = tk.StringVar(value="")
         self.auto_detect_defence_var = tk.BooleanVar(value=bool(initial_config.get("auto_detect_defence", True)))
-        self.manual_variant_var = tk.StringVar(value=self._active_variant_key)
         self.route_mode_var = tk.StringVar(value=str(initial_config.get("defence_route_mode_override", "auto")))
+
+        self.resource_status_var = tk.StringVar(value="No variant selected.")
 
         container = ttk.Frame(self.root, padding=12)
         container.pack(fill="both", expand=True)
@@ -84,7 +92,6 @@ class PersistentLauncher:
 
         ttk.Label(expulsion_tab, text="No extra settings for expulsion yet.").pack(anchor="w")
 
-        defence_top = ttk.Frame(defence_tab)
         defence_mode_frame = ttk.LabelFrame(defence_tab, text="Defence Mode", padding=8)
         defence_mode_frame.pack(fill="x", pady=(0, 8))
 
@@ -99,6 +106,7 @@ class PersistentLauncher:
         self.defence_mode_hint_label = ttk.Label(defence_mode_frame, text="")
         self.defence_mode_hint_label.pack(anchor="w", pady=(4, 0))
 
+        defence_top = ttk.Frame(defence_tab)
         defence_top.pack(fill="x")
 
         list_frame = ttk.LabelFrame(defence_top, text="Defence Variants", padding=8)
@@ -115,7 +123,7 @@ class PersistentLauncher:
         form_frame.pack(side="left", fill="both", expand=True)
 
         ttk.Label(form_frame, text="Variant Name").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-        ttk.Entry(form_frame, textvariable=self.variant_name_var, width=30).grid(row=0, column=1, sticky="w", pady=(0, 6))
+        ttk.Entry(form_frame, textvariable=self.variant_name_var, width=32).grid(row=0, column=1, sticky="w", pady=(0, 6))
 
         ttk.Label(form_frame, text="Route Mode").grid(row=1, column=0, sticky="w", padx=(0, 8))
         self.route_mode_combo = ttk.Combobox(
@@ -123,7 +131,7 @@ class PersistentLauncher:
             textvariable=self.route_mode_var,
             state="readonly",
             values=("auto", "playback", "record"),
-            width=30,
+            width=32,
         )
         self.route_mode_combo.grid(row=1, column=1, sticky="w")
         self.route_mode_combo.bind("<<ComboboxSelected>>", self._on_route_mode_changed)
@@ -131,14 +139,46 @@ class PersistentLauncher:
         buttons_frame = ttk.Frame(form_frame)
         buttons_frame.grid(row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        ttk.Button(buttons_frame, text="Save Variant", command=self._save_variant).pack(side="left")
-        ttk.Button(buttons_frame, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
+        ttk.Button(buttons_frame, text="Add / Save", command=self._save_variant).pack(side="left")
+        ttk.Button(buttons_frame, text="Delete Variant", command=self._delete_variant).pack(side="left", padx=(6, 0))
         self.set_active_btn = ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant)
         self.set_active_btn.pack(side="left", padx=(6, 0))
         ttk.Button(buttons_frame, text="Refresh Checks", command=self._refresh_checks).pack(side="left", padx=(6, 0))
 
         self.variant_hint_label = ttk.Label(defence_tab, text="")
         self.variant_hint_label.pack(anchor="w", pady=(6, 0))
+
+        resource_frame = ttk.LabelFrame(defence_tab, text="Resource Management", padding=8)
+        resource_frame.pack(fill="x", pady=(8, 0))
+
+        row1 = ttk.Frame(resource_frame)
+        row1.pack(fill="x")
+        ttk.Button(row1, text="View Image", command=self._preview_image).pack(side="left")
+        ttk.Button(row1, text="Replace Image", command=self._replace_image).pack(side="left", padx=(6, 0))
+        ttk.Button(row1, text="Delete Image", command=self._delete_image).pack(side="left", padx=(6, 0))
+        ttk.Button(row1, text="Open Assets Folder", command=self._open_assets_folder).pack(side="left", padx=(12, 0))
+
+        row2 = ttk.Frame(resource_frame)
+        row2.pack(fill="x", pady=(6, 0))
+        ttk.Button(row2, text="View Route", command=self._preview_route).pack(side="left")
+        ttk.Button(row2, text="Replace Route", command=self._replace_route).pack(side="left", padx=(6, 0))
+        ttk.Button(row2, text="Delete Route", command=self._delete_route).pack(side="left", padx=(6, 0))
+        ttk.Button(row2, text="Open Routes Folder", command=self._open_routes_folder).pack(side="left", padx=(12, 0))
+
+        ttk.Label(resource_frame, textvariable=self.resource_status_var).pack(anchor="w", pady=(8, 0))
+
+        preview_frame = ttk.Frame(resource_frame)
+        preview_frame.pack(fill="x", pady=(6, 0))
+
+        image_box = ttk.LabelFrame(preview_frame, text="Image Preview", padding=6)
+        image_box.pack(side="left", fill="both", expand=True, padx=(0, 6))
+        self.image_preview_label = ttk.Label(image_box, text="No image loaded.")
+        self.image_preview_label.pack(fill="both", expand=True)
+
+        route_box = ttk.LabelFrame(preview_frame, text="Route Preview", padding=6)
+        route_box.pack(side="left", fill="both", expand=True)
+        self.route_preview_text = scrolledtext.ScrolledText(route_box, height=8, wrap="word", state="disabled", font=("Consolas", 9))
+        self.route_preview_text.pack(fill="both", expand=True)
 
         control_frame = ttk.Frame(container)
         control_frame.pack(fill="x", pady=(10, 8))
@@ -189,6 +229,12 @@ class PersistentLauncher:
         self.log_text.configure(state="disabled")
         self._log_lines = 0
 
+    def _set_route_preview_text(self, content: str):
+        self.route_preview_text.configure(state="normal")
+        self.route_preview_text.delete("1.0", "end")
+        self.route_preview_text.insert("1.0", content)
+        self.route_preview_text.configure(state="disabled")
+
     def _normalize_variant_key(self, text: str) -> str:
         safe = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in text.strip().lower())
         return safe.strip("_")
@@ -202,6 +248,17 @@ class PersistentLauncher:
         if index < 0 or index >= len(keys):
             return None
         return keys[index]
+
+    def _current_variant_key(self) -> Optional[str]:
+        return self._selected_variant_key_from_list() or (self._active_variant_key if self._active_variant_key in self._variants else None)
+
+    def _variant_paths(self, key: str) -> tuple[str, Path, Optional[Path]]:
+        item = self._variants.get(key, {})
+        template_name = str(item.get("entry_template", "")).strip() or f"{key}.png"
+        route_name = str(item.get("route_name", key)).strip() or key
+        route_path = defence_route_path(route_name)
+        template_file = template_path(template_name)
+        return template_name, route_path, template_file
 
     def _refresh_variant_list(self, select_key: Optional[str] = None):
         self.variant_list.delete(0, "end")
@@ -221,6 +278,9 @@ class PersistentLauncher:
         if not keys:
             self.variant_name_var.set("")
             self.variant_hint_label.configure(text="No variants configured yet.")
+            self.resource_status_var.set("No variant selected.")
+            self.image_preview_label.configure(text="No image loaded.", image="")
+            self._set_route_preview_text("")
             return
 
         if not select_key or select_key not in self._variants:
@@ -243,31 +303,28 @@ class PersistentLauncher:
         self._refresh_checks()
 
     def _refresh_checks(self):
-        key = self._selected_variant_key_from_list() or self._active_variant_key
+        key = self._current_variant_key()
         if not key or key not in self._variants:
             self.variant_hint_label.configure(text="")
+            self.resource_status_var.set("No variant selected.")
             return
 
-        item = self._variants[key]
-        template_name = str(item.get("entry_template", "")).strip()
-        route_name = str(item.get("route_name", key)).strip() or key
-
-        template_exists = bool(template_name and template_path(template_name) is not None)
-        route_path = defence_route_path(route_name)
+        template_name, route_path, template_file = self._variant_paths(key)
+        template_exists = template_file is not None
         route_exists = route_path.exists()
 
         selected_mode = self.route_mode_var.get().strip().lower() or "auto"
-        if selected_mode == "auto":
-            effective_mode = "playback" if route_exists else "record"
-        else:
-            effective_mode = selected_mode
+        effective_mode = "playback" if (selected_mode == "auto" and route_exists) else ("record" if selected_mode == "auto" else selected_mode)
 
         self.variant_hint_label.configure(
             text=(
-                f"Variant={key} | Template: {'OK' if template_exists else 'Missing'} ({template_name or 'n/a'})"
+                f"Variant={key} | Template: {'OK' if template_exists else 'Missing'} ({template_name})"
                 f" | Route: {'OK' if route_exists else 'Missing'} ({route_path.name})"
                 f" | Effective mode: {effective_mode}"
             )
+        )
+        self.resource_status_var.set(
+            f"Template file: {template_name} | Route file: {route_path.name}"
         )
 
     def _save_variant(self):
@@ -277,21 +334,10 @@ class PersistentLauncher:
             messagebox.showerror("Invalid Variant", "Variant name is required.")
             return
 
-        entry_template = f"{key}.png"
-        route_name = key
-
-        if template_path(entry_template) is None:
-            proceed = messagebox.askyesno(
-                "Template Missing",
-                f"Expected template '{entry_template}' was not found. Save anyway?",
-            )
-            if not proceed:
-                return
-
         self._variants[key] = {
             "display_name": raw_name or key,
-            "entry_template": entry_template,
-            "route_name": route_name,
+            "entry_template": f"{key}.png",
+            "route_name": key,
         }
         if not self._active_variant_key:
             self._active_variant_key = key
@@ -299,14 +345,34 @@ class PersistentLauncher:
         self._append_log(f"[INFO] Defence variant saved: {key}", tag="info")
         self._refresh_variant_list(select_key=key)
 
+    def _delete_variant_resources(self, key: str):
+        template_name, route_path, template_file = self._variant_paths(key)
+        removed = []
+        if template_file is not None and template_file.exists():
+            template_file.unlink(missing_ok=True)
+            removed.append(template_name)
+        if route_path.exists():
+            route_path.unlink(missing_ok=True)
+            removed.append(route_path.name)
+        if removed:
+            self._append_log(f"[WARN] Deleted resources for {key}: {', '.join(removed)}", tag="warn")
+
     def _delete_variant(self):
-        key = self._selected_variant_key_from_list() or self.manual_variant_var.get().strip()
+        key = self._current_variant_key()
         if not key or key not in self._variants:
             messagebox.showerror("Delete Variant", "Please select a valid variant first.")
             return
 
         if not messagebox.askyesno("Delete Variant", f"Delete defence variant '{key}'?"):
             return
+
+        remove_resources = messagebox.askyesno(
+            "Delete Resources",
+            "Also delete this variant's image and route files?",
+        )
+
+        if remove_resources:
+            self._delete_variant_resources(key)
 
         del self._variants[key]
         if self._active_variant_key == key:
@@ -347,13 +413,6 @@ class PersistentLauncher:
         self._refresh_variant_list(select_key=self._selected_variant_key_from_list() or self._active_variant_key)
         self._refresh_checks()
 
-    def _on_manual_variant_changed(self, _event=None):
-        selected = self.manual_variant_var.get().strip()
-        if selected in self._variants:
-            self._active_variant_key = selected
-            self._refresh_variant_list(select_key=selected)
-            self._refresh_checks()
-
     def _on_route_mode_changed(self, _event=None):
         self._refresh_checks()
 
@@ -370,6 +429,185 @@ class PersistentLauncher:
             self.notebook.select(2)
         elif manual == "expulsion":
             self.notebook.select(1)
+
+    def _preview_image(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Preview Image", "Please select a defence variant first.")
+            return
+
+        template_name, _route_path, template_file = self._variant_paths(key)
+        if template_file is None or not template_file.exists():
+            messagebox.showerror("Preview Image", f"Template not found: {template_name}")
+            return
+
+        try:
+            image = tk.PhotoImage(file=str(template_file))
+        except Exception as exc:
+            messagebox.showerror("Preview Image", f"Failed to load image: {exc}")
+            return
+
+        width = max(1, int(image.width()))
+        height = max(1, int(image.height()))
+        factor = max((width + PREVIEW_MAX_W - 1) // PREVIEW_MAX_W, (height + PREVIEW_MAX_H - 1) // PREVIEW_MAX_H, 1)
+        if factor > 1:
+            image = image.subsample(factor, factor)
+
+        self._image_preview_handle = image
+        self.image_preview_label.configure(image=image, text="")
+        self._append_log(f"[INFO] Loaded image preview: {template_name}", tag="info")
+
+    def _preview_route(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Preview Route", "Please select a defence variant first.")
+            return
+
+        _template_name, route_path, _template_file = self._variant_paths(key)
+        if not route_path.exists():
+            messagebox.showerror("Preview Route", f"Route file not found: {route_path.name}")
+            return
+
+        try:
+            payload = json.loads(route_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            messagebox.showerror("Preview Route", f"Failed to read route JSON: {exc}")
+            return
+
+        if not isinstance(payload, dict):
+            messagebox.showerror("Preview Route", "Route JSON must be an object.")
+            return
+
+        events = payload.get("events", [])
+        if not isinstance(events, list):
+            messagebox.showerror("Preview Route", "Route JSON must include an 'events' array.")
+            return
+
+        first_t = float(events[0].get("t", 0.0)) if events else 0.0
+        last_t = float(events[-1].get("t", 0.0)) if events else 0.0
+        summary = (
+            f"Route: {route_path.name}\n"
+            f"Events: {len(events)}\n"
+            f"First event t: {first_t:.4f}s\n"
+            f"Last event t: {last_t:.4f}s\n"
+        )
+        self._set_route_preview_text(summary)
+        self._append_log(f"[INFO] Loaded route preview: {route_path.name}", tag="info")
+
+    def _replace_image(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Replace Image", "Please select a defence variant first.")
+            return
+
+        source = filedialog.askopenfilename(
+            title="Select entry template image",
+            filetypes=[("PNG image", "*.png"), ("All files", "*.*")],
+        )
+        if not source:
+            return
+
+        destination = ASSETS_DIR / f"{key}.png"
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+        except Exception as exc:
+            messagebox.showerror("Replace Image", f"Failed to copy image: {exc}")
+            return
+
+        self._variants[key]["entry_template"] = destination.name
+        save_variants(self._variants)
+        self._append_log(f"[INFO] Replaced image for {key}: {destination.name}", tag="info")
+        self._refresh_variant_list(select_key=key)
+        self._preview_image()
+
+    def _validate_route_payload(self, payload: Any) -> bool:
+        return isinstance(payload, dict) and isinstance(payload.get("events"), list)
+
+    def _replace_route(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Replace Route", "Please select a defence variant first.")
+            return
+
+        source = filedialog.askopenfilename(
+            title="Select route json",
+            filetypes=[("JSON", "*.json"), ("All files", "*.*")],
+        )
+        if not source:
+            return
+
+        source_path = Path(source)
+        try:
+            payload = json.loads(source_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            messagebox.showerror("Replace Route", f"Invalid JSON: {exc}")
+            return
+
+        if not self._validate_route_payload(payload):
+            messagebox.showerror("Replace Route", "Route JSON must include an 'events' array.")
+            return
+
+        destination = defence_route_path(key)
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination)
+        except Exception as exc:
+            messagebox.showerror("Replace Route", f"Failed to copy route file: {exc}")
+            return
+
+        self._variants[key]["route_name"] = key
+        save_variants(self._variants)
+        self._append_log(f"[INFO] Replaced route for {key}: {destination.name}", tag="info")
+        self._refresh_variant_list(select_key=key)
+        self._preview_route()
+
+    def _delete_image(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Delete Image", "Please select a defence variant first.")
+            return
+
+        template_name, _route_path, template_file = self._variant_paths(key)
+        if template_file is None or not template_file.exists():
+            messagebox.showinfo("Delete Image", f"Template does not exist: {template_name}")
+            return
+
+        if not messagebox.askyesno("Delete Image", f"Delete template '{template_name}'?"):
+            return
+
+        template_file.unlink(missing_ok=True)
+        self._append_log(f"[WARN] Deleted image resource: {template_name}", tag="warn")
+        self._refresh_checks()
+        self.image_preview_label.configure(text="Image deleted.", image="")
+        self._image_preview_handle = None
+
+    def _delete_route(self):
+        key = self._current_variant_key()
+        if not key:
+            messagebox.showerror("Delete Route", "Please select a defence variant first.")
+            return
+
+        _template_name, route_path, _template_file = self._variant_paths(key)
+        if not route_path.exists():
+            messagebox.showinfo("Delete Route", f"Route does not exist: {route_path.name}")
+            return
+
+        if not messagebox.askyesno("Delete Route", f"Delete route '{route_path.name}'?"):
+            return
+
+        route_path.unlink(missing_ok=True)
+        self._append_log(f"[WARN] Deleted route resource: {route_path.name}", tag="warn")
+        self._refresh_checks()
+        self._set_route_preview_text("Route deleted.")
+
+    def _open_assets_folder(self):
+        ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+        subprocess.Popen(["explorer", str(ASSETS_DIR)])
+
+    def _open_routes_folder(self):
+        ROUTES_DIR.mkdir(parents=True, exist_ok=True)
+        subprocess.Popen(["explorer", str(ROUTES_DIR)])
 
     def _collect_settings(self) -> Optional[Dict[str, Any]]:
         candidate = {
@@ -411,6 +649,14 @@ class PersistentLauncher:
         if selected["manual_dungeon"] == "defence" and not self._variants:
             messagebox.showerror("Missing Defence Variant", "Please create at least one defence variant before starting defence mode.")
             return
+
+        if selected["defence_route_mode_override"] == "playback":
+            check_key = self._current_variant_key() or self._active_variant_key
+            if check_key:
+                _template_name, route_path, _template_file = self._variant_paths(check_key)
+                if not route_path.exists():
+                    messagebox.showerror("Invalid Route Mode", "Playback mode requires an existing route file for the selected variant.")
+                    return
 
         runtime_config = get_default_config()
         runtime_config.update(selected)

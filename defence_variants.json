@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "variants": {
+    "defence_wings_inspo_volition": {
+      "display_name": "Defence Wings Inspo Volition",
+      "entry_template": "defence_wings_inspo_volition.png",
+      "route_name": "defence_wings_inspo_volition"
+    },
+    "defence_lv65": {
+      "display_name": "Defence Lv65",
+      "entry_template": "defence_lv65.png",
+      "route_name": "defence_lv65"
+    }
+  }
+}
