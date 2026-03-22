@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Any, Dict, Optional
 
 from dna.config import ASSETS_DIR, ROUTES_DIR, defence_route_path, get_default_config, template_path
+from dna.defence.route_stats import get_rate, load_route_stats, record_attempt, record_success, save_route_stats
 from dna.defence.variant_store import load_variants, save_variants
 from dna.gui.runner import AppRunner
 from dna.settings import ALLOWED_MANUAL_DUNGEONS, normalize_runtime_settings, save_settings_overrides
@@ -26,6 +27,7 @@ class PersistentLauncher:
         self._log_lines = 0
         self._last_detected_variant = ""
         self._image_preview_handle = None
+        self._route_stats = load_route_stats()
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -47,6 +49,7 @@ class PersistentLauncher:
 
         self.variant_name_var = tk.StringVar(value="")
         self.auto_detect_defence_var = tk.BooleanVar(value=bool(initial_config.get("auto_detect_defence", True)))
+        self.preview_enabled_var = tk.BooleanVar(value=bool(initial_config.get("defence_preview_enabled", True)))
         self.route_mode_var = tk.StringVar(value=str(initial_config.get("defence_route_mode_override", "auto")))
 
         self.resource_status_var = tk.StringVar(value="No variant selected.")
@@ -103,6 +106,14 @@ class PersistentLauncher:
         )
         self.auto_detect_check.pack(anchor="w")
 
+        self.preview_toggle_check = ttk.Checkbutton(
+            defence_mode_frame,
+            text="Enable resource preview",
+            variable=self.preview_enabled_var,
+            command=self._on_preview_toggle_changed,
+        )
+        self.preview_toggle_check.pack(anchor="w", pady=(4, 0))
+
         self.defence_mode_hint_label = ttk.Label(defence_mode_frame, text="")
         self.defence_mode_hint_label.pack(anchor="w", pady=(4, 0))
 
@@ -153,15 +164,13 @@ class PersistentLauncher:
 
         row1 = ttk.Frame(resource_frame)
         row1.pack(fill="x")
-        ttk.Button(row1, text="View Image", command=self._preview_image).pack(side="left")
-        ttk.Button(row1, text="Replace Image", command=self._replace_image).pack(side="left", padx=(6, 0))
+        ttk.Button(row1, text="Replace Image", command=self._replace_image).pack(side="left")
         ttk.Button(row1, text="Delete Image", command=self._delete_image).pack(side="left", padx=(6, 0))
         ttk.Button(row1, text="Open Assets Folder", command=self._open_assets_folder).pack(side="left", padx=(12, 0))
 
         row2 = ttk.Frame(resource_frame)
         row2.pack(fill="x", pady=(6, 0))
-        ttk.Button(row2, text="View Route", command=self._preview_route).pack(side="left")
-        ttk.Button(row2, text="Replace Route", command=self._replace_route).pack(side="left", padx=(6, 0))
+        ttk.Button(row2, text="Replace Route", command=self._replace_route).pack(side="left")
         ttk.Button(row2, text="Delete Route", command=self._delete_route).pack(side="left", padx=(6, 0))
         ttk.Button(row2, text="Open Routes Folder", command=self._open_routes_folder).pack(side="left", padx=(12, 0))
 
@@ -301,6 +310,16 @@ class PersistentLauncher:
         item = self._variants[key]
         self.variant_name_var.set(str(item.get("display_name", key)))
         self._refresh_checks()
+        self._refresh_previews()
+
+    def _refresh_previews(self):
+        if not self.preview_enabled_var.get():
+            self.image_preview_label.configure(text="Preview disabled.", image="")
+            self._image_preview_handle = None
+            self._set_route_preview_text("Preview disabled.")
+            return
+        self._preview_image()
+        self._preview_route()
 
     def _refresh_checks(self):
         key = self._current_variant_key()
@@ -413,6 +432,10 @@ class PersistentLauncher:
         self._refresh_variant_list(select_key=self._selected_variant_key_from_list() or self._active_variant_key)
         self._refresh_checks()
 
+    def _on_preview_toggle_changed(self):
+        self._refresh_previews()
+        self._refresh_checks()
+
     def _on_route_mode_changed(self, _event=None):
         self._refresh_checks()
 
@@ -433,18 +456,21 @@ class PersistentLauncher:
     def _preview_image(self):
         key = self._current_variant_key()
         if not key:
-            messagebox.showerror("Preview Image", "Please select a defence variant first.")
+            self.image_preview_label.configure(text="No variant selected.", image="")
+            self._image_preview_handle = None
             return
 
         template_name, _route_path, template_file = self._variant_paths(key)
         if template_file is None or not template_file.exists():
-            messagebox.showerror("Preview Image", f"Template not found: {template_name}")
+            self.image_preview_label.configure(text=f"Template missing: {template_name}", image="")
+            self._image_preview_handle = None
             return
 
         try:
             image = tk.PhotoImage(file=str(template_file))
         except Exception as exc:
-            messagebox.showerror("Preview Image", f"Failed to load image: {exc}")
+            self.image_preview_label.configure(text=f"Image load failed: {exc}", image="")
+            self._image_preview_handle = None
             return
 
         width = max(1, int(image.width()))
@@ -455,44 +481,47 @@ class PersistentLauncher:
 
         self._image_preview_handle = image
         self.image_preview_label.configure(image=image, text="")
-        self._append_log(f"[INFO] Loaded image preview: {template_name}", tag="info")
 
     def _preview_route(self):
         key = self._current_variant_key()
         if not key:
-            messagebox.showerror("Preview Route", "Please select a defence variant first.")
+            self._set_route_preview_text("No variant selected.")
             return
 
         _template_name, route_path, _template_file = self._variant_paths(key)
         if not route_path.exists():
-            messagebox.showerror("Preview Route", f"Route file not found: {route_path.name}")
+            attempts, successes, rate = get_rate(self._route_stats, key)
+            self._set_route_preview_text(
+                f"Route: {route_path.name}\nStatus: Missing\nSuccess: {successes}/{attempts} ({rate:.1f}%)\n"
+            )
             return
 
         try:
             payload = json.loads(route_path.read_text(encoding="utf-8"))
         except Exception as exc:
-            messagebox.showerror("Preview Route", f"Failed to read route JSON: {exc}")
+            self._set_route_preview_text(f"Route: {route_path.name}\nJSON read failed: {exc}")
             return
 
         if not isinstance(payload, dict):
-            messagebox.showerror("Preview Route", "Route JSON must be an object.")
+            self._set_route_preview_text(f"Route: {route_path.name}\nInvalid JSON payload: object required.")
             return
 
         events = payload.get("events", [])
         if not isinstance(events, list):
-            messagebox.showerror("Preview Route", "Route JSON must include an 'events' array.")
+            self._set_route_preview_text(f"Route: {route_path.name}\nInvalid JSON payload: events[] required.")
             return
 
         first_t = float(events[0].get("t", 0.0)) if events else 0.0
         last_t = float(events[-1].get("t", 0.0)) if events else 0.0
+        attempts, successes, rate = get_rate(self._route_stats, key)
         summary = (
             f"Route: {route_path.name}\n"
             f"Events: {len(events)}\n"
             f"First event t: {first_t:.4f}s\n"
             f"Last event t: {last_t:.4f}s\n"
+            f"Success: {successes}/{attempts} ({rate:.1f}%)\n"
         )
         self._set_route_preview_text(summary)
-        self._append_log(f"[INFO] Loaded route preview: {route_path.name}", tag="info")
 
     def _replace_image(self):
         key = self._current_variant_key()
@@ -519,7 +548,7 @@ class PersistentLauncher:
         save_variants(self._variants)
         self._append_log(f"[INFO] Replaced image for {key}: {destination.name}", tag="info")
         self._refresh_variant_list(select_key=key)
-        self._preview_image()
+        self._refresh_previews()
 
     def _validate_route_payload(self, payload: Any) -> bool:
         return isinstance(payload, dict) and isinstance(payload.get("events"), list)
@@ -560,7 +589,7 @@ class PersistentLauncher:
         save_variants(self._variants)
         self._append_log(f"[INFO] Replaced route for {key}: {destination.name}", tag="info")
         self._refresh_variant_list(select_key=key)
-        self._preview_route()
+        self._refresh_previews()
 
     def _delete_image(self):
         key = self._current_variant_key()
@@ -579,8 +608,7 @@ class PersistentLauncher:
         template_file.unlink(missing_ok=True)
         self._append_log(f"[WARN] Deleted image resource: {template_name}", tag="warn")
         self._refresh_checks()
-        self.image_preview_label.configure(text="Image deleted.", image="")
-        self._image_preview_handle = None
+        self._refresh_previews()
 
     def _delete_route(self):
         key = self._current_variant_key()
@@ -599,7 +627,7 @@ class PersistentLauncher:
         route_path.unlink(missing_ok=True)
         self._append_log(f"[WARN] Deleted route resource: {route_path.name}", tag="warn")
         self._refresh_checks()
-        self._set_route_preview_text("Route deleted.")
+        self._refresh_previews()
 
     def _open_assets_folder(self):
         ASSETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -615,6 +643,7 @@ class PersistentLauncher:
             "manual_dungeon": self.manual_var.get().strip().lower(),
             "target_runs": self.target_runs_var.get().strip(),
             "compact_log_enabled": self.compact_log_var.get(),
+            "defence_preview_enabled": self.preview_enabled_var.get(),
             "auto_detect_defence": self.auto_detect_defence_var.get(),
             "manual_defence_variant": self._active_variant_key,
             "defence_route_mode_override": self.route_mode_var.get().strip().lower(),
@@ -759,6 +788,12 @@ class PersistentLauncher:
                 else:
                     self._append_log(f"[INFO] Session started. mode={mode} manual={manual} target_runs={target}", tag="info")
             elif name == "run_completed":
+                dungeon_type = str(payload.get("dungeon_type", ""))
+                route_name = str(payload.get("route_name", "") or "").strip()
+                if dungeon_type == "defence" and route_name:
+                    record_attempt(self._route_stats, route_name)
+                    save_route_stats(self._route_stats)
+                    self._refresh_previews()
                 if self.compact_log_var.get():
                     run_index = int(payload.get("runs_completed", 0))
                     self._append_log(f"[EVENT] Run #{run_index} completed. Restarting dungeon.", tag="info")
@@ -780,6 +815,11 @@ class PersistentLauncher:
                 self._render_session_summary(payload)
             elif name == "defence_success":
                 self._last_defence_success = int(payload.get("defence_success_runs", 0))
+                route_name = str(payload.get("route_name", "") or "").strip()
+                if route_name:
+                    record_success(self._route_stats, route_name)
+                    save_route_stats(self._route_stats)
+                    self._refresh_previews()
                 if not self.compact_log_var.get():
                     self._append_log(f"[STATS] Defence success runs: {self._last_defence_success}", tag="info")
             return

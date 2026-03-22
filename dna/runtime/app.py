@@ -207,12 +207,16 @@ class DNAApp:
                     session.last_result_check = now
                     result_action = self.result_ui.check_and_click_result_ui(active_profile)
                     if result_action == "start_clicked":
+                        completed_variant = defence_state.current_variant
+                        completed_route = defence_state.active_route_name
                         self._emit_event(
                             on_event,
                             "run_restarted",
                             {
                                 "dungeon_type": active_profile.key,
                                 "runs_completed": session.runs_completed,
+                                "variant": completed_variant,
+                                "route_name": completed_route,
                             },
                         )
                         self.controller.release_keys(ROUTE_RECORD_KEYS)
@@ -229,6 +233,9 @@ class DNAApp:
                             {
                                 "runs_completed": session.runs_completed,
                                 "target_runs": target_runs,
+                                "dungeon_type": active_profile.key,
+                                "variant": completed_variant,
+                                "route_name": completed_route,
                             },
                         )
                         if target_runs > 0 and session.runs_completed >= target_runs:
@@ -273,7 +280,11 @@ class DNAApp:
                         self._emit_event(
                             on_event,
                             "defence_success",
-                            {"defence_success_runs": defence_success_runs},
+                            {
+                                "defence_success_runs": defence_success_runs,
+                                "variant": defence_state.current_variant,
+                                "route_name": defence_state.active_route_name,
+                            },
                         )
                     defence_ready_prev = defence_state.ready_for_skill
 

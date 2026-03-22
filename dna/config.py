@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     "debug_dungeon_detection": False,
     "target_runs": 0,
     "compact_log_enabled": True,
+    "defence_preview_enabled": True,
     "enable_run_stats": True,
     "skill_check_interval": 1.2,
     "skill_state_confirm_frames": 2,

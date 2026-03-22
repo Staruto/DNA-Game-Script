@@ -61,6 +61,7 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
     fallback_manual = _normalize_manual_dungeon(base.get("manual_dungeon", "defence"), "defence")
     fallback_runs = _normalize_target_runs(base.get("target_runs", 0), 0)
     fallback_compact_log = _normalize_bool(base.get("compact_log_enabled", True), True)
+    fallback_defence_preview = _normalize_bool(base.get("defence_preview_enabled", True), True)
     fallback_auto_detect_defence = _normalize_bool(base.get("auto_detect_defence", True), True)
     fallback_manual_variant = str(base.get("manual_defence_variant", "")).strip()
     fallback_route_mode = _normalize_route_mode(base.get("defence_route_mode_override", "auto"), "auto")
@@ -69,6 +70,7 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
     manual = _normalize_manual_dungeon(raw.get("manual_dungeon", fallback_manual), fallback_manual)
     target_runs = _normalize_target_runs(raw.get("target_runs", fallback_runs), fallback_runs)
     compact_log_enabled = _normalize_bool(raw.get("compact_log_enabled", fallback_compact_log), fallback_compact_log)
+    defence_preview_enabled = _normalize_bool(raw.get("defence_preview_enabled", fallback_defence_preview), fallback_defence_preview)
     auto_detect_defence = _normalize_bool(raw.get("auto_detect_defence", fallback_auto_detect_defence), fallback_auto_detect_defence)
     manual_defence_variant = str(raw.get("manual_defence_variant", fallback_manual_variant)).strip()
     defence_route_mode_override = _normalize_route_mode(
@@ -81,6 +83,7 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
         "manual_dungeon": manual,
         "target_runs": target_runs,
         "compact_log_enabled": compact_log_enabled,
+        "defence_preview_enabled": defence_preview_enabled,
         "auto_detect_defence": auto_detect_defence,
         "manual_defence_variant": manual_defence_variant,
         "defence_route_mode_override": defence_route_mode_override,
