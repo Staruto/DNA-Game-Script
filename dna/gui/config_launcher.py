@@ -28,6 +28,7 @@ class PersistentLauncher:
         self._last_detected_variant = ""
         self._image_preview_handle = None
         self._route_stats = load_route_stats()
+        self._suppress_variant_name_trace = False
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -38,7 +39,7 @@ class PersistentLauncher:
         self.root = tk.Tk()
         self.root.title("DNA Launcher")
         self.root.geometry("1080x820")
-        self.root.minsize(980, 680)
+        self.root.minsize(1080, 820)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.mode_var = tk.StringVar(value=str(initial_config.get("dungeon_mode", "auto")))
@@ -48,6 +49,7 @@ class PersistentLauncher:
         self.status_var = tk.StringVar(value="Idle")
 
         self.variant_name_var = tk.StringVar(value="")
+        self.variant_name_var.trace_add("write", self._on_variant_name_changed)
         self.auto_detect_defence_var = tk.BooleanVar(value=bool(initial_config.get("auto_detect_defence", True)))
         self.preview_enabled_var = tk.BooleanVar(value=bool(initial_config.get("defence_preview_enabled", True)))
         self.route_mode_var = tk.StringVar(value=str(initial_config.get("defence_route_mode_override", "auto")))
@@ -130,16 +132,14 @@ class PersistentLauncher:
         variant_scroll.pack(side="right", fill="y")
         self.variant_list.configure(yscrollcommand=variant_scroll.set)
 
-        variant_actions = ttk.Frame(list_frame)
-        variant_actions.pack(fill="x", pady=(8, 0))
-        ttk.Button(variant_actions, text="Add", command=self._add_variant).pack(side="left")
-        ttk.Button(variant_actions, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
-
         form_frame = ttk.LabelFrame(defence_top, text="Variant Details", padding=8)
         form_frame.pack(side="left", fill="both", expand=True)
 
         ttk.Label(form_frame, text="Variant Name").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
         ttk.Entry(form_frame, textvariable=self.variant_name_var, width=32).grid(row=0, column=1, sticky="w", pady=(0, 6))
+        self.save_name_btn = ttk.Button(form_frame, text="Save Changes", command=self._save_variant)
+        self.save_name_btn.grid(row=0, column=2, sticky="w", padx=(8, 0), pady=(0, 6))
+        self.save_name_btn.grid_remove()
 
         ttk.Label(form_frame, text="Route Mode").grid(row=1, column=0, sticky="w", padx=(0, 8))
         self.route_mode_combo = ttk.Combobox(
@@ -155,10 +155,14 @@ class PersistentLauncher:
         buttons_frame = ttk.Frame(form_frame)
         buttons_frame.grid(row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        ttk.Button(buttons_frame, text="Save Name", command=self._save_variant).pack(side="left")
         self.set_active_btn = ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant)
-        self.set_active_btn.pack(side="left", padx=(12, 0))
+        self.set_active_btn.pack(side="left")
         ttk.Button(buttons_frame, text="Refresh Checks", command=self._refresh_checks).pack(side="left", padx=(6, 0))
+
+        variant_actions = ttk.Frame(defence_tab)
+        variant_actions.pack(fill="x", pady=(8, 0))
+        ttk.Button(variant_actions, text="Add", command=self._add_variant).pack(side="left")
+        ttk.Button(variant_actions, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
 
         self.variant_hint_label = ttk.Label(defence_tab, text="")
         self.variant_hint_label.pack(anchor="w", pady=(6, 0))
@@ -193,8 +197,19 @@ class PersistentLauncher:
         self.route_preview_text = scrolledtext.ScrolledText(route_box, height=8, wrap="word", state="disabled", font=("Consolas", 9))
         self.route_preview_text.pack(fill="both", expand=True)
 
+        logs_frame = ttk.LabelFrame(container, text="Logs", padding=8)
+        logs_frame.pack(fill="both", expand=True, pady=(10, 8))
+
+        self.log_text = scrolledtext.ScrolledText(logs_frame, height=10, wrap="word", state="disabled", font=("Consolas", 10))
+        self.log_text.pack(fill="both", expand=True)
+        self.log_text.configure(background="#ffffff", foreground="#111111", insertbackground="#111111")
+        self.log_text.tag_configure("info", foreground="#111111")
+        self.log_text.tag_configure("warn", foreground="#8a5a00")
+        self.log_text.tag_configure("error", foreground="#9f1239")
+        self.log_text.tag_configure("summary", foreground="#0f5132")
+
         control_frame = ttk.Frame(container)
-        control_frame.pack(fill="x", pady=(10, 8))
+        control_frame.pack(fill="x")
 
         self.start_stop_btn = ttk.Button(control_frame, text="Start", width=10, command=self._on_start_stop)
         self.start_stop_btn.pack(side="left")
@@ -204,17 +219,6 @@ class PersistentLauncher:
 
         self.status_label = ttk.Label(control_frame, textvariable=self.status_var, width=30, anchor="w")
         self.status_label.pack(side="left", padx=(12, 0))
-
-        logs_frame = ttk.LabelFrame(container, text="Logs", padding=8)
-        logs_frame.pack(fill="both", expand=True)
-
-        self.log_text = scrolledtext.ScrolledText(logs_frame, wrap="word", state="disabled", font=("Consolas", 10))
-        self.log_text.pack(fill="both", expand=True)
-        self.log_text.configure(background="#ffffff", foreground="#111111", insertbackground="#111111")
-        self.log_text.tag_configure("info", foreground="#111111")
-        self.log_text.tag_configure("warn", foreground="#8a5a00")
-        self.log_text.tag_configure("error", foreground="#9f1239")
-        self.log_text.tag_configure("summary", foreground="#0f5132")
 
         self._last_selected_dungeon = str(initial_config.get("manual_dungeon", "defence"))
         self._last_defence_success = 0
@@ -294,6 +298,7 @@ class PersistentLauncher:
             self.resource_status_var.set("No variant selected.")
             self.image_preview_label.configure(text="No image loaded.", image="")
             self._set_route_preview_text("")
+            self.save_name_btn.grid_remove()
             return
 
         if not select_key or select_key not in self._variants:
@@ -312,9 +317,29 @@ class PersistentLauncher:
             return
 
         item = self._variants[key]
+        self._suppress_variant_name_trace = True
         self.variant_name_var.set(str(item.get("display_name", key)))
+        self._suppress_variant_name_trace = False
         self._refresh_checks()
         self._refresh_previews()
+        self._update_save_name_visibility()
+
+    def _on_variant_name_changed(self, *_args):
+        if self._suppress_variant_name_trace:
+            return
+        self._update_save_name_visibility()
+
+    def _update_save_name_visibility(self):
+        key = self._current_variant_key()
+        if not key or key not in self._variants:
+            self.save_name_btn.grid_remove()
+            return
+        current = str(self._variants[key].get("display_name", key)).strip()
+        entered = self.variant_name_var.get().strip()
+        if entered and entered != current:
+            self.save_name_btn.grid()
+        else:
+            self.save_name_btn.grid_remove()
 
     def _refresh_previews(self):
         if not self.preview_enabled_var.get():
@@ -388,6 +413,7 @@ class PersistentLauncher:
         save_variants(self._variants)
         self._append_log(f"[INFO] Updated display name: {key} -> {new_name}", tag="info")
         self._refresh_variant_list(select_key=key)
+        self._update_save_name_visibility()
 
     def _delete_variant_resources(self, key: str):
         template_name, route_path, template_file = self._variant_paths(key)
