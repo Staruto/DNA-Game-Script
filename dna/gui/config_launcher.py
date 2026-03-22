@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, scrolledtext, ttk
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 from typing import Any, Dict, Optional
 
 from dna.config import ASSETS_DIR, ROUTES_DIR, defence_route_path, get_default_config, template_path
@@ -130,6 +130,11 @@ class PersistentLauncher:
         variant_scroll.pack(side="right", fill="y")
         self.variant_list.configure(yscrollcommand=variant_scroll.set)
 
+        variant_actions = ttk.Frame(list_frame)
+        variant_actions.pack(fill="x", pady=(8, 0))
+        ttk.Button(variant_actions, text="Add", command=self._add_variant).pack(side="left")
+        ttk.Button(variant_actions, text="Delete", command=self._delete_variant).pack(side="left", padx=(6, 0))
+
         form_frame = ttk.LabelFrame(defence_top, text="Variant Details", padding=8)
         form_frame.pack(side="left", fill="both", expand=True)
 
@@ -150,10 +155,9 @@ class PersistentLauncher:
         buttons_frame = ttk.Frame(form_frame)
         buttons_frame.grid(row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        ttk.Button(buttons_frame, text="Add / Save", command=self._save_variant).pack(side="left")
-        ttk.Button(buttons_frame, text="Delete Variant", command=self._delete_variant).pack(side="left", padx=(6, 0))
+        ttk.Button(buttons_frame, text="Save Name", command=self._save_variant).pack(side="left")
         self.set_active_btn = ttk.Button(buttons_frame, text="Set Active", command=self._set_active_variant)
-        self.set_active_btn.pack(side="left", padx=(6, 0))
+        self.set_active_btn.pack(side="left", padx=(12, 0))
         ttk.Button(buttons_frame, text="Refresh Checks", command=self._refresh_checks).pack(side="left", padx=(6, 0))
 
         self.variant_hint_label = ttk.Label(defence_tab, text="")
@@ -346,22 +350,43 @@ class PersistentLauncher:
             f"Template file: {template_name} | Route file: {route_path.name}"
         )
 
-    def _save_variant(self):
-        raw_name = self.variant_name_var.get().strip()
+    def _add_variant(self):
+        raw_name = simpledialog.askstring("Add Defence Variant", "Enter new variant name:", parent=self.root)
+        if raw_name is None:
+            return
+        raw_name = raw_name.strip()
         key = self._normalize_variant_key(raw_name)
         if not key:
             messagebox.showerror("Invalid Variant", "Variant name is required.")
             return
+        if key in self._variants:
+            messagebox.showerror("Duplicate Variant", f"Variant '{key}' already exists.")
+            self._refresh_variant_list(select_key=key)
+            return
 
         self._variants[key] = {
-            "display_name": raw_name or key,
+            "display_name": raw_name,
             "entry_template": f"{key}.png",
             "route_name": key,
         }
         if not self._active_variant_key:
             self._active_variant_key = key
         save_variants(self._variants)
-        self._append_log(f"[INFO] Defence variant saved: {key}", tag="info")
+        self._append_log(f"[INFO] Defence variant added: {key}", tag="info")
+        self._refresh_variant_list(select_key=key)
+
+    def _save_variant(self):
+        key = self._current_variant_key()
+        if not key or key not in self._variants:
+            messagebox.showerror("Save Name", "Please select a defence variant first.")
+            return
+        new_name = self.variant_name_var.get().strip()
+        if not new_name:
+            messagebox.showerror("Save Name", "Variant name cannot be empty.")
+            return
+        self._variants[key]["display_name"] = new_name
+        save_variants(self._variants)
+        self._append_log(f"[INFO] Updated display name: {key} -> {new_name}", tag="info")
         self._refresh_variant_list(select_key=key)
 
     def _delete_variant_resources(self, key: str):
@@ -385,13 +410,13 @@ class PersistentLauncher:
         if not messagebox.askyesno("Delete Variant", f"Delete defence variant '{key}'?"):
             return
 
-        remove_resources = messagebox.askyesno(
-            "Delete Resources",
-            "Also delete this variant's image and route files?",
-        )
+        if not messagebox.askyesno(
+            "Confirm Resource Deletion",
+            "This will also delete the variant's image and route files. Continue?",
+        ):
+            return
 
-        if remove_resources:
-            self._delete_variant_resources(key)
+        self._delete_variant_resources(key)
 
         del self._variants[key]
         if self._active_variant_key == key:
