@@ -112,6 +112,9 @@ GetCursorPos.restype = wintypes.BOOL
 
 SCANCODES = {
     "esc": 0x01,
+    "a": 0x1E,
+    "s": 0x1F,
+    "d": 0x20,
     "w": 0x11,
     "e": 0x12,
     "f": 0x21,
@@ -129,6 +132,9 @@ VKCODES = {
     "left_mouse": 0x01,
     "right_mouse": 0x02,
     "esc": 0x1B,
+    "a": 0x41,
+    "s": 0x53,
+    "d": 0x44,
     "w": 0x57,
     "e": 0x45,
     "f": 0x46,
@@ -142,7 +148,8 @@ VKCODES = {
     "r": 0x52,
 }
 
-ROUTE_RECORD_KEYS = ["w", "f", "e", "ctrl", "space", "shift"]
+# Keep this list broad enough for defence route recording and replay fidelity.
+ROUTE_RECORD_KEYS = ["w", "a", "s", "d", "f", "e", "ctrl", "space", "shift", "q", "r"]
 ROUTE_RECORD_MOUSE_BUTTONS = ["left", "right"]
 
 
