@@ -441,6 +441,7 @@ class PersistentLauncher:
 
     def _delete_variant_resources(self, key: str):
         template_name, route_path, template_file = self._variant_paths(key)
+        route_stats_key = route_path.stem
         removed = []
         if template_file is not None and template_file.exists():
             template_file.unlink(missing_ok=True)
@@ -448,6 +449,9 @@ class PersistentLauncher:
         if route_path.exists():
             route_path.unlink(missing_ok=True)
             removed.append(route_path.name)
+            if route_stats_key in self._route_stats:
+                self._route_stats.pop(route_stats_key, None)
+                save_route_stats(self._route_stats)
         if removed:
             self._append_log(f"[WARN] Deleted resources for {key}: {', '.join(removed)}", tag="warn")
 
@@ -661,6 +665,9 @@ class PersistentLauncher:
             return
 
         self._variants[key]["route_name"] = key
+        # Replacing a route starts a new baseline for this route's success rate.
+        self._route_stats.pop(destination.stem, None)
+        save_route_stats(self._route_stats)
         save_variants(self._variants)
         self._append_log(f"[INFO] Replaced route for {key}: {destination.name}", tag="info")
         self._refresh_variant_list(select_key=key)
@@ -700,6 +707,8 @@ class PersistentLauncher:
             return
 
         route_path.unlink(missing_ok=True)
+        self._route_stats.pop(route_path.stem, None)
+        save_route_stats(self._route_stats)
         self._append_log(f"[WARN] Deleted route resource: {route_path.name}", tag="warn")
         self._refresh_checks()
         self._refresh_previews()
