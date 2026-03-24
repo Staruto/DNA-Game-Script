@@ -1,681 +1,573 @@
 {
   "route_name": "defence_wings_inspo_morale",
-  "created_at": "2026-03-23 22:20:46",
+  "created_at": "2026-03-23 23:01:26",
   "events": [
     {
-      "t": 1.8551,
+      "t": 1.8555,
       "type": "key",
       "key": "w",
       "action": "down"
     },
     {
-      "t": 2.3829,
+      "t": 2.121,
       "type": "mouse",
-      "dx": -30,
-      "dy": -3
+      "dx": -21,
+      "dy": 7
     },
     {
-      "t": 2.3935,
-      "type": "mouse",
-      "dx": -9,
-      "dy": -2
-    },
-    {
-      "t": 2.404,
-      "type": "mouse",
-      "dx": -11,
-      "dy": -2
-    },
-    {
-      "t": 2.4146,
-      "type": "mouse",
-      "dx": -5,
-      "dy": -1
-    },
-    {
-      "t": 2.4251,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 0
-    },
-    {
-      "t": 2.4356,
-      "type": "mouse",
-      "dx": -2,
-      "dy": -1
-    },
-    {
-      "t": 2.5626,
-      "type": "mouse",
-      "dx": -4,
-      "dy": -1
-    },
-    {
-      "t": 2.5731,
-      "type": "mouse",
-      "dx": -2,
-      "dy": -1
-    },
-    {
-      "t": 2.5837,
+      "t": 2.1315,
       "type": "mouse",
       "dx": -3,
       "dy": 0
     },
     {
-      "t": 2.5942,
+      "t": 2.1421,
       "type": "mouse",
-      "dx": -8,
-      "dy": -1
+      "dx": -3,
+      "dy": 1
     },
     {
-      "t": 2.6047,
+      "t": 2.1526,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 1
+    },
+    {
+      "t": 2.1628,
       "type": "mouse",
       "dx": -11,
-      "dy": -3
+      "dy": 4
     },
     {
-      "t": 2.6152,
+      "t": 2.1734,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 1
+    },
+    {
+      "t": 2.1839,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 1
+    },
+    {
+      "t": 2.1944,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 2
+    },
+    {
+      "t": 2.2046,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 2
+    },
+    {
+      "t": 2.2152,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 2.2367,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 2.2473,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 2.2997,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.3102,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.321,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.3315,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.3418,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 1
+    },
+    {
+      "t": 2.3523,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 2
+    },
+    {
+      "t": 2.3744,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.3849,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 2.4057,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 2.4163,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 2.7856,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.7962,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 2
+    },
+    {
+      "t": 2.8067,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.8172,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 2.8277,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 2.9127,
       "type": "key",
-      "key": "e",
+      "key": "space",
       "action": "down"
     },
     {
-      "t": 2.6152,
-      "type": "mouse",
-      "dx": -9,
-      "dy": -3
+      "t": 3.0279,
+      "type": "key",
+      "key": "space",
+      "action": "up"
     },
     {
-      "t": 2.6258,
+      "t": 3.3233,
+      "type": "key",
+      "key": "space",
+      "action": "down"
+    },
+    {
+      "t": 3.3443,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 3.3549,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 3
+    },
+    {
+      "t": 3.3655,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 2
+    },
+    {
+      "t": 3.3759,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 2
+    },
+    {
+      "t": 3.3864,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 1
+    },
+    {
+      "t": 3.3967,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 4
+    },
+    {
+      "t": 3.4073,
+      "type": "mouse",
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 3.4603,
+      "type": "key",
+      "key": "space",
+      "action": "up"
+    },
+    {
+      "t": 4.0198,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.0408,
+      "type": "mouse",
+      "dx": 0,
+      "dy": -2
+    },
+    {
+      "t": 4.0512,
+      "type": "mouse",
+      "dx": 0,
+      "dy": -1
+    },
+    {
+      "t": 4.0617,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.1037,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 4.4096,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 4.4733,
+      "type": "mouse_button",
+      "button": "left",
+      "action": "down"
+    },
+    {
+      "t": 4.5475,
+      "type": "mouse_button",
+      "button": "left",
+      "action": "up"
+    },
+    {
+      "t": 4.6215,
+      "type": "mouse_button",
+      "button": "left",
+      "action": "down"
+    },
+    {
+      "t": 4.7169,
+      "type": "mouse_button",
+      "button": "left",
+      "action": "up"
+    },
+    {
+      "t": 5.8766,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 5.8872,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.8977,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.9082,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 0
+    },
+    {
+      "t": 5.9187,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 5.9298,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 5.9403,
       "type": "mouse",
       "dx": -5,
       "dy": 0
     },
     {
-      "t": 2.6363,
-      "type": "mouse",
-      "dx": -2,
-      "dy": -1
-    },
-    {
-      "t": 2.72,
-      "type": "key",
-      "key": "e",
-      "action": "up"
-    },
-    {
-      "t": 2.8783,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 2.8993,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -1
-    },
-    {
-      "t": 2.9098,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 0
-    },
-    {
-      "t": 2.9203,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -1
-    },
-    {
-      "t": 2.9308,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -1
-    },
-    {
-      "t": 2.9413,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 2.9623,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 0
-    },
-    {
-      "t": 2.9728,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -1
-    },
-    {
-      "t": 3.0785,
-      "type": "mouse",
-      "dx": 2,
-      "dy": 0
-    },
-    {
-      "t": 3.089,
-      "type": "mouse",
-      "dx": 2,
-      "dy": 3
-    },
-    {
-      "t": 3.0995,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 1
-    },
-    {
-      "t": 3.11,
-      "type": "mouse",
-      "dx": 2,
-      "dy": 1
-    },
-    {
-      "t": 3.1208,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 2
-    },
-    {
-      "t": 3.2156,
-      "type": "mouse_button",
-      "button": "right",
-      "action": "down"
-    },
-    {
-      "t": 3.2794,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.4688,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 1
-    },
-    {
-      "t": 3.4793,
-      "type": "mouse",
-      "dx": 1,
-      "dy": 10
-    },
-    {
-      "t": 3.4899,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 6
-    },
-    {
-      "t": 3.5004,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.5109,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.5214,
-      "type": "mouse",
-      "dx": 2,
-      "dy": 2
-    },
-    {
-      "t": 3.532,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.5425,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 4
-    },
-    {
-      "t": 3.5532,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.5848,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.5953,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.6058,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.6163,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.6269,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.6374,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 5
-    },
-    {
-      "t": 3.6479,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.6584,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.6694,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.68,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.6905,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 4
-    },
-    {
-      "t": 3.701,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.7115,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.7326,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.7431,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 3
-    },
-    {
-      "t": 3.7536,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.7641,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 3.7747,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.7854,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.7965,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 3
-    },
-    {
-      "t": 3.807,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 3
-    },
-    {
-      "t": 3.8174,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.8281,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.8386,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 2
-    },
-    {
-      "t": 3.8491,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 3
-    },
-    {
-      "t": 3.8597,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 3.8702,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.8807,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.8913,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 3.9762,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 3.9866,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 4
-    },
-    {
-      "t": 3.9976,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 5
-    },
-    {
-      "t": 4.008,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 4.0185,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 4.0291,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 4.0501,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 4.0817,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 4.0922,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 4.1028,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 4.1343,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 4.1449,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 5
-    },
-    {
-      "t": 4.1554,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 5
-    },
-    {
-      "t": 4.1659,
+      "t": 5.9507,
       "type": "mouse",
       "dx": -3,
-      "dy": 5
+      "dy": 0
     },
     {
-      "t": 4.1764,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 4
-    },
-    {
-      "t": 4.1871,
+      "t": 5.9612,
       "type": "mouse",
       "dx": -4,
-      "dy": 4
+      "dy": 0
     },
     {
-      "t": 4.1976,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 4.2187,
+      "t": 5.9717,
       "type": "mouse",
       "dx": -1,
       "dy": 0
     },
     {
-      "t": 4.2707,
-      "type": "mouse_button",
-      "button": "right",
-      "action": "up"
-    },
-    {
-      "t": 4.3867,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "down"
-    },
-    {
-      "t": 4.4711,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "up"
-    },
-    {
-      "t": 4.5553,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "down"
-    },
-    {
-      "t": 4.6187,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "up"
-    },
-    {
-      "t": 5.2826,
+      "t": 6.0243,
       "type": "key",
-      "key": "w",
-      "action": "up"
-    },
-    {
-      "t": 5.5775,
-      "type": "key",
-      "key": "w",
+      "key": "shift",
       "action": "down"
     },
     {
-      "t": 5.6095,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
+      "t": 6.4784,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
     },
     {
-      "t": 5.62,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -4
+      "t": 6.9206,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
     },
     {
-      "t": 5.6304,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -6
+      "t": 7.4171,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
     },
     {
-      "t": 5.641,
+      "t": 7.8706,
       "type": "mouse",
-      "dx": 0,
-      "dy": -4
+      "dx": -1,
+      "dy": 0
     },
     {
-      "t": 5.6521,
+      "t": 7.8811,
       "type": "mouse",
-      "dx": 1,
-      "dy": -9
+      "dx": -4,
+      "dy": 0
     },
     {
-      "t": 5.6626,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -3
-    },
-    {
-      "t": 5.6731,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -3
-    },
-    {
-      "t": 5.6836,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -2
-    },
-    {
-      "t": 5.6943,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -3
-    },
-    {
-      "t": 5.7048,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 5.7469,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 6.4309,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 6.4624,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 6.4729,
+      "t": 7.8917,
       "type": "mouse",
       "dx": -2,
-      "dy": -4
+      "dy": 0
     },
     {
-      "t": 6.4835,
+      "t": 7.9023,
       "type": "mouse",
-      "dx": -1,
+      "dx": -7,
+      "dy": 0
+    },
+    {
+      "t": 7.9131,
+      "type": "mouse",
+      "dx": -6,
+      "dy": 0
+    },
+    {
+      "t": 7.9237,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 7.9342,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 7.9447,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 8.0715,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 8.3024,
+      "type": "mouse",
+      "dx": 1,
+      "dy": 0
+    },
+    {
+      "t": 8.3129,
+      "type": "mouse",
+      "dx": 2,
       "dy": -2
     },
     {
-      "t": 6.5045,
+      "t": 8.3234,
+      "type": "mouse",
+      "dx": 4,
+      "dy": -1
+    },
+    {
+      "t": 8.3345,
+      "type": "mouse",
+      "dx": 1,
+      "dy": -1
+    },
+    {
+      "t": 8.3451,
+      "type": "mouse",
+      "dx": 2,
+      "dy": -1
+    },
+    {
+      "t": 8.3556,
+      "type": "mouse",
+      "dx": 2,
+      "dy": -1
+    },
+    {
+      "t": 8.3661,
+      "type": "mouse",
+      "dx": 2,
+      "dy": -1
+    },
+    {
+      "t": 8.3767,
+      "type": "mouse",
+      "dx": 4,
+      "dy": -2
+    },
+    {
+      "t": 8.3872,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 8.3976,
+      "type": "mouse",
+      "dx": 1,
+      "dy": 0
+    },
+    {
+      "t": 8.6923,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 8.7025,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 0
+    },
+    {
+      "t": 8.7131,
+      "type": "mouse",
+      "dx": -4,
+      "dy": 0
+    },
+    {
+      "t": 8.7236,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 8.7341,
+      "type": "mouse",
+      "dx": -5,
+      "dy": 0
+    },
+    {
+      "t": 8.7447,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 1
+    },
+    {
+      "t": 8.7552,
       "type": "mouse",
       "dx": -1,
-      "dy": -1
+      "dy": 0
     },
     {
-      "t": 6.515,
+      "t": 8.7868,
       "type": "mouse",
-      "dx": 0,
-      "dy": -1
+      "dx": -1,
+      "dy": 0
     },
     {
-      "t": 7.1896,
+      "t": 9.1021,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 9.3232,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 10.0076,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 10.1024,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 10.3549,
       "type": "key",
       "key": "w",
       "action": "up"
