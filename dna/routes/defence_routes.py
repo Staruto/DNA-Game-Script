@@ -14,6 +14,13 @@ class DefenceRouteManager:
         self.config = config
         self.controller = controller
 
+    def _record_keys(self) -> list[str]:
+        keys = self.config.get("defence_route_record_keys", ROUTE_RECORD_KEYS)
+        if not isinstance(keys, list):
+            return list(ROUTE_RECORD_KEYS)
+        normalized = [str(item).strip().lower() for item in keys if str(item).strip()]
+        return normalized or list(ROUTE_RECORD_KEYS)
+
     def route_file_path(self, route_name: Optional[str] = None):
         if route_name is None:
             route_name = "defence_default"
@@ -80,6 +87,8 @@ class DefenceRouteManager:
         state.recovery_notice_count = 0
         state.popup_detected_logged = False
         state.replay_locked_until_restart = False
+        state.replay_exec_events = []
+        state.replay_exec_emitted = 0
         if clear_variant:
             state.current_variant = None
             state.active_route_name = None
@@ -91,7 +100,8 @@ class DefenceRouteManager:
             print("[WARN] Defence route recording is unavailable until the current defence variant is resolved.")
             return False
 
-        self.controller.release_keys(ROUTE_RECORD_KEYS)
+        record_keys = self._record_keys()
+        self.controller.release_keys(record_keys)
         self.controller.release_mouse_buttons(ROUTE_RECORD_MOUSE_BUTTONS)
         self.reset_defence_state(defence_state, pending_replay_after_delay=False, clear_variant=False)
         record_state.active = True
@@ -100,7 +110,7 @@ class DefenceRouteManager:
         record_state.route_name = route_name
         record_state.exit_requested = False
         record_state.last_cursor = self.controller.get_cursor_position()
-        for key in ROUTE_RECORD_KEYS:
+        for key in record_keys:
             record_state.key_state[key] = self.controller.is_physical_key_down(key)
         for button in ROUTE_RECORD_MOUSE_BUTTONS:
             record_state.mouse_button_state[button] = self.controller.is_physical_mouse_button_down(button)
@@ -113,7 +123,8 @@ class DefenceRouteManager:
 
         now = time.time()
         elapsed = max(0.0, now - record_state.start_ts)
-        for key in ROUTE_RECORD_KEYS:
+        record_keys = self._record_keys()
+        for key in record_keys:
             if record_state.key_state.get(key, False):
                 record_state.events.append({"t": round(elapsed, 4), "type": "key", "key": key, "action": "up"})
         for button in ROUTE_RECORD_MOUSE_BUTTONS:
@@ -132,7 +143,7 @@ class DefenceRouteManager:
         record_state.events = []
         record_state.route_name = None
         record_state.last_cursor = None
-        for key in ROUTE_RECORD_KEYS:
+        for key in record_keys:
             record_state.key_state[key] = False
         for button in ROUTE_RECORD_MOUSE_BUTTONS:
             record_state.mouse_button_state[button] = False
@@ -144,7 +155,8 @@ class DefenceRouteManager:
             return
 
         elapsed = max(0.0, now - record_state.start_ts)
-        for key in ROUTE_RECORD_KEYS:
+        record_keys = self._record_keys()
+        for key in record_keys:
             current = self.controller.is_physical_key_down(key)
             previous = record_state.key_state.get(key, False)
             if current != previous:

@@ -38,6 +38,30 @@ class DNAApp:
         except Exception:
             return
 
+    def _record_keys(self) -> list[str]:
+        keys = self.config.get("defence_route_record_keys", ROUTE_RECORD_KEYS)
+        if not isinstance(keys, list):
+            return list(ROUTE_RECORD_KEYS)
+        normalized = [str(item).strip().lower() for item in keys if str(item).strip()]
+        return normalized or list(ROUTE_RECORD_KEYS)
+
+    def _emit_replay_trace(self, on_event: Optional[Callable[[str, dict], None]], defence_state: DefenceState):
+        emitted = int(defence_state.replay_exec_emitted)
+        events = defence_state.replay_exec_events
+        if emitted >= len(events):
+            return
+        chunk = events[emitted:]
+        defence_state.replay_exec_emitted = len(events)
+        self._emit_event(
+            on_event,
+            "defence_replay_trace",
+            {
+                "route_name": defence_state.active_route_name,
+                "events": chunk,
+                "replay_active": defence_state.replay_active,
+            },
+        )
+
     def _format_duration(self, seconds: float) -> str:
         seconds = max(0, int(seconds))
         hours = seconds // 3600
@@ -138,9 +162,10 @@ class DNAApp:
         defence_state = DefenceState()
         defence_success_runs = 0
         defence_ready_prev = False
+        replay_active_prev = False
         non_defence_streak = 0
         record_state = RouteRecordingState(
-            key_state={key: False for key in ROUTE_RECORD_KEYS},
+            key_state={key: False for key in self._record_keys()},
             mouse_button_state={"left": False, "right": False},
             hotkey_state={
                 str(self.config.get("defence_route_record_hotkey_start", "p")).lower(): False,
@@ -156,7 +181,7 @@ class DNAApp:
 
                 if should_stop is not None and should_stop():
                     self.route_manager.stop_recording(record_state, save=False)
-                    self.controller.release_keys(ROUTE_RECORD_KEYS)
+                    self.controller.release_keys(self._record_keys())
                     self._print_session_summary(session)
                     if defence_success_runs > 0:
                         print(f"[INFO] Defence success runs: {defence_success_runs}")
@@ -219,7 +244,7 @@ class DNAApp:
                                 "route_name": completed_route,
                             },
                         )
-                        self.controller.release_keys(ROUTE_RECORD_KEYS)
+                        self.controller.release_keys(self._record_keys())
                         self.route_manager.reset_defence_state(
                             defence_state,
                             pending_replay_after_delay=False,
@@ -264,6 +289,27 @@ class DNAApp:
                     else:
                         defence_active = self.defence_service.is_prephase_active(defence_state)
 
+                    if defence_state.replay_active and not replay_active_prev:
+                        self._emit_event(
+                            on_event,
+                            "defence_replay_started",
+                            {
+                                "route_name": defence_state.active_route_name,
+                                "recorded_event_count": len(defence_state.replay_events or []),
+                            },
+                        )
+                    self._emit_replay_trace(on_event, defence_state)
+                    if (not defence_state.replay_active) and replay_active_prev:
+                        self._emit_event(
+                            on_event,
+                            "defence_replay_finished",
+                            {
+                                "route_name": defence_state.active_route_name,
+                                "executed_event_count": len(defence_state.replay_exec_events),
+                            },
+                        )
+                    replay_active_prev = defence_state.replay_active
+
                     if defence_state.entry_detected_logged and not entry_logged_before:
                         self._emit_event(
                             on_event,
@@ -305,12 +351,13 @@ class DNAApp:
                         exit_confirm_frames = locked_confirm_frames
                     if non_defence_streak >= exit_confirm_frames:
                         defence_ready_prev = False
-                        self.controller.release_keys(ROUTE_RECORD_KEYS)
+                        self.controller.release_keys(self._record_keys())
                         self.route_manager.reset_defence_state(
                             defence_state,
                             pending_replay_after_delay=False,
                             clear_variant=True,
                         )
+                        replay_active_prev = False
 
                 loot_approaching = False
                 if active_profile.key != "defence":
@@ -362,7 +409,7 @@ class DNAApp:
 
             except KeyboardInterrupt:
                 self.route_manager.stop_recording(record_state, save=False)
-                self.controller.release_keys(ROUTE_RECORD_KEYS)
+                self.controller.release_keys(self._record_keys())
                 self._print_session_summary(session)
                 self._emit_event(
                     on_event,

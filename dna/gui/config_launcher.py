@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 import tkinter as tk
@@ -29,6 +30,11 @@ class PersistentLauncher:
         self._image_preview_handle = None
         self._route_stats = load_route_stats()
         self._suppress_variant_name_trace = False
+        self._timeline_record_events: list[dict] = []
+        self._timeline_replay_events: list[dict] = []
+        self._timeline_record_route_name = ""
+        self._timeline_replay_route_name = ""
+        self._timeline_render_pending = False
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -61,6 +67,10 @@ class PersistentLauncher:
         self.route_mode_var = tk.StringVar(value=str(initial_config.get("defence_route_mode_override", "auto")))
 
         self.resource_status_var = tk.StringVar(value="No variant selected.")
+        self.timeline_mode_var = tk.StringVar(value="aggregated")
+        self.timeline_show_record_var = tk.BooleanVar(value=True)
+        self.timeline_show_replay_var = tk.BooleanVar(value=True)
+        self.timeline_status_var = tk.StringVar(value="Timeline: no route selected.")
 
         container = ttk.Frame(self._scroll_canvas, padding=12)
         self._canvas_window_id = self._scroll_canvas.create_window((0, 0), window=container, anchor="nw")
@@ -206,6 +216,43 @@ class PersistentLauncher:
         self.route_preview_text = scrolledtext.ScrolledText(route_box, height=8, wrap="word", state="disabled", font=("Consolas", 9))
         self.route_preview_text.pack(fill="both", expand=True)
 
+        timeline_frame = ttk.LabelFrame(defence_tab, text="Route Timeline Diagnosis", padding=8)
+        timeline_frame.pack(fill="both", expand=True, pady=(8, 0))
+
+        timeline_control = ttk.Frame(timeline_frame)
+        timeline_control.pack(fill="x")
+        ttk.Checkbutton(
+            timeline_control,
+            text="Record Track",
+            variable=self.timeline_show_record_var,
+            command=self._schedule_timeline_render,
+        ).pack(side="left")
+        ttk.Checkbutton(
+            timeline_control,
+            text="Replay Track",
+            variable=self.timeline_show_replay_var,
+            command=self._schedule_timeline_render,
+        ).pack(side="left", padx=(8, 0))
+        ttk.Label(timeline_control, text="View").pack(side="left", padx=(14, 6))
+        self.timeline_mode_combo = ttk.Combobox(
+            timeline_control,
+            textvariable=self.timeline_mode_var,
+            state="readonly",
+            values=("aggregated", "detail"),
+            width=14,
+        )
+        self.timeline_mode_combo.pack(side="left")
+        self.timeline_mode_combo.bind("<<ComboboxSelected>>", lambda _e: self._schedule_timeline_render())
+        ttk.Button(timeline_control, text="Reload", command=self._reload_timeline).pack(side="left", padx=(10, 0))
+        ttk.Label(timeline_control, textvariable=self.timeline_status_var).pack(side="left", padx=(12, 0))
+
+        self.timeline_canvas = tk.Canvas(timeline_frame, height=290, background="#fafcff", highlightthickness=1, highlightbackground="#d8e2f1")
+        self.timeline_canvas.pack(fill="both", expand=True, pady=(8, 0))
+        self.timeline_scroll_x = ttk.Scrollbar(timeline_frame, orient="horizontal", command=self.timeline_canvas.xview)
+        self.timeline_scroll_x.pack(fill="x")
+        self.timeline_canvas.configure(xscrollcommand=self.timeline_scroll_x.set)
+        self.timeline_canvas.bind("<Configure>", lambda _e: self._schedule_timeline_render())
+
         control_frame = ttk.Frame(container)
         control_frame.pack(fill="x", pady=(10, 8))
 
@@ -237,6 +284,7 @@ class PersistentLauncher:
         self._on_mode_changed()
         self._on_manual_dungeon_changed()
         self._on_auto_detect_changed()
+        self._reload_timeline()
         self._poll_events()
 
     def _on_container_configure(self, _event=None):
@@ -275,6 +323,164 @@ class PersistentLauncher:
         self.route_preview_text.delete("1.0", "end")
         self.route_preview_text.insert("1.0", content)
         self.route_preview_text.configure(state="disabled")
+
+    def _reload_timeline(self):
+        key = self._current_variant_key()
+        self._timeline_record_events = []
+        self._timeline_record_route_name = ""
+        if key and key in self._variants:
+            _template_name, route_path, _template_file = self._variant_paths(key)
+            self._timeline_record_route_name = route_path.stem
+            if route_path.exists():
+                try:
+                    payload = json.loads(route_path.read_text(encoding="utf-8"))
+                    events = payload.get("events", []) if isinstance(payload, dict) else []
+                    if isinstance(events, list):
+                        self._timeline_record_events = list(events)
+                except Exception:
+                    self._timeline_record_events = []
+        if self._timeline_replay_route_name != self._timeline_record_route_name:
+            self._timeline_replay_events = []
+            self._timeline_replay_route_name = self._timeline_record_route_name
+        self._schedule_timeline_render()
+
+    def _schedule_timeline_render(self):
+        if self._timeline_render_pending:
+            return
+        self._timeline_render_pending = True
+        self.root.after(1, self._render_timeline)
+
+    def _build_key_intervals(self, events: list[dict], use_actual: bool) -> dict[str, list[tuple[float, float]]]:
+        held: dict[str, float] = {}
+        intervals: dict[str, list[tuple[float, float]]] = {}
+        for item in events:
+            if str(item.get("type", "")) != "key":
+                continue
+            key = str(item.get("key", "")).strip().lower()
+            action = str(item.get("action", "")).strip().lower()
+            if not key or action not in ("down", "up"):
+                continue
+            raw_t = item.get("actual_t") if use_actual else item.get("t", item.get("expected_t", 0.0))
+            t = max(0.0, float(raw_t or 0.0))
+            if action == "down":
+                held[key] = t
+            elif key in held:
+                start = held.pop(key)
+                end = max(start, t)
+                intervals.setdefault(key, []).append((start, end))
+
+        if events:
+            end_t = 0.0
+            if use_actual:
+                end_t = float(events[-1].get("actual_t", 0.0))
+            else:
+                end_t = float(events[-1].get("t", events[-1].get("expected_t", 0.0)))
+            for key, start in held.items():
+                intervals.setdefault(key, []).append((start, max(start, end_t)))
+        return intervals
+
+    def _build_mouse_buckets(self, events: list[dict], duration: float, use_actual: bool, bucket_count: int) -> list[float]:
+        if bucket_count <= 0:
+            return []
+        buckets = [0.0 for _ in range(bucket_count)]
+        if duration <= 0.0:
+            return buckets
+        for item in events:
+            if str(item.get("type", "")) != "mouse":
+                continue
+            raw_t = item.get("actual_t") if use_actual else item.get("t", item.get("expected_t", 0.0))
+            t = max(0.0, float(raw_t or 0.0))
+            ratio = min(1.0, t / duration)
+            index = min(bucket_count - 1, int(ratio * (bucket_count - 1)))
+            dx = int(item.get("dx", 0))
+            dy = int(item.get("dy", 0))
+            buckets[index] += math.hypot(dx, dy)
+        return buckets
+
+    def _render_timeline(self):
+        self._timeline_render_pending = False
+        canvas = self.timeline_canvas
+        canvas.delete("all")
+
+        record_events = sorted(self._timeline_record_events, key=lambda item: float(item.get("t", 0.0)))
+        replay_events = sorted(self._timeline_replay_events, key=lambda item: float(item.get("actual_t", 0.0)))
+        show_record = self.timeline_show_record_var.get()
+        show_replay = self.timeline_show_replay_var.get()
+        mode = self.timeline_mode_var.get().strip().lower()
+
+        if not record_events and not replay_events:
+            self.timeline_status_var.set("Timeline: no route data.")
+            canvas.configure(scrollregion=(0, 0, max(200, canvas.winfo_width()), 290))
+            return
+
+        record_duration = float(record_events[-1].get("t", 0.0)) if record_events else 0.0
+        replay_duration = float(replay_events[-1].get("actual_t", 0.0)) if replay_events else 0.0
+        duration = max(record_duration, replay_duration, 0.1)
+
+        width = max(canvas.winfo_width(), int(duration * (40 if mode == "aggregated" else 110)) + 180)
+        height = 290
+        canvas.configure(scrollregion=(0, 0, width, height))
+
+        left_pad = 80
+        right_pad = 20
+        usable_width = max(100, width - left_pad - right_pad)
+
+        def map_x(t: float) -> float:
+            return left_pad + (max(0.0, min(duration, t)) / duration) * usable_width
+
+        canvas.create_line(left_pad, 24, left_pad + usable_width, 24, fill="#6b7280")
+        sec = 0
+        while sec <= int(duration) + 1:
+            x = map_x(float(sec))
+            canvas.create_line(x, 18, x, 270, fill="#e5e7eb")
+            canvas.create_text(x + 2, 10, text=f"{sec}s", anchor="w", fill="#4b5563", font=("Segoe UI", 8))
+            sec += 1
+
+        record_intervals = self._build_key_intervals(record_events, use_actual=False) if show_record else {}
+        replay_intervals = self._build_key_intervals(replay_events, use_actual=True) if show_replay else {}
+        keys = sorted(set(record_intervals.keys()) | set(replay_intervals.keys()))
+        if not keys:
+            keys = ["(no key events)"]
+        key_rows = keys[:6]
+        row_y0 = 36
+        row_gap = 18
+
+        for idx, key in enumerate(key_rows):
+            y = row_y0 + idx * row_gap
+            canvas.create_text(8, y + 6, text=key, anchor="w", fill="#111827", font=("Consolas", 9))
+            if show_record:
+                for start, end in record_intervals.get(key, []):
+                    canvas.create_rectangle(map_x(start), y, map_x(end), y + 6, fill="#3b82f6", outline="")
+            if show_replay:
+                for start, end in replay_intervals.get(key, []):
+                    canvas.create_rectangle(map_x(start), y + 8, map_x(end), y + 14, fill="#f59e0b", outline="")
+
+        mouse_top = 164
+        mouse_height = 86
+        canvas.create_rectangle(left_pad, mouse_top, left_pad + usable_width, mouse_top + mouse_height, outline="#94a3b8")
+        canvas.create_text(8, mouse_top + 4, text="mouse", anchor="w", fill="#111827", font=("Consolas", 9))
+        bucket_count = max(24, min(260, usable_width // 4))
+        rec_buckets = self._build_mouse_buckets(record_events, duration, use_actual=False, bucket_count=bucket_count) if show_record else []
+        rep_buckets = self._build_mouse_buckets(replay_events, duration, use_actual=True, bucket_count=bucket_count) if show_replay else []
+        max_intensity = max([0.0] + rec_buckets + rep_buckets)
+        if max_intensity > 0:
+            for i in range(bucket_count):
+                x0 = left_pad + (i / bucket_count) * usable_width
+                x1 = left_pad + ((i + 1) / bucket_count) * usable_width
+                if show_record and i < len(rec_buckets) and rec_buckets[i] > 0:
+                    h = (rec_buckets[i] / max_intensity) * (mouse_height / 2 - 4)
+                    canvas.create_rectangle(x0, mouse_top + mouse_height / 2 - h, x1, mouse_top + mouse_height / 2, fill="#93c5fd", outline="")
+                if show_replay and i < len(rep_buckets) and rep_buckets[i] > 0:
+                    h = (rep_buckets[i] / max_intensity) * (mouse_height / 2 - 4)
+                    canvas.create_rectangle(x0, mouse_top + mouse_height / 2, x1, mouse_top + mouse_height / 2 + h, fill="#fcd34d", outline="")
+
+        deltas = [abs(float(item.get("delta_ms", 0.0))) for item in replay_events if isinstance(item, dict)]
+        avg_delta = (sum(deltas) / len(deltas)) if deltas else 0.0
+        max_delta = max(deltas) if deltas else 0.0
+        self.timeline_status_var.set(
+            f"Timeline: route={self._timeline_record_route_name or '-'} record={len(record_events)} replay={len(replay_events)} "
+            f"avg_drift={avg_delta:.1f}ms max_drift={max_delta:.1f}ms"
+        )
 
     def _normalize_variant_key(self, text: str) -> str:
         safe = "".join(ch if (ch.isalnum() or ch in ("_", "-")) else "_" for ch in text.strip().lower())
@@ -370,9 +576,11 @@ class PersistentLauncher:
             self.image_preview_label.configure(text="Preview disabled.", image="")
             self._image_preview_handle = None
             self._set_route_preview_text("Preview disabled.")
+            self._reload_timeline()
             return
         self._preview_image()
         self._preview_route()
+        self._reload_timeline()
 
     def _refresh_checks(self):
         key = self._current_variant_key()
@@ -441,6 +649,7 @@ class PersistentLauncher:
 
     def _delete_variant_resources(self, key: str):
         template_name, route_path, template_file = self._variant_paths(key)
+        route_stats_key = route_path.stem
         removed = []
         if template_file is not None and template_file.exists():
             template_file.unlink(missing_ok=True)
@@ -448,6 +657,9 @@ class PersistentLauncher:
         if route_path.exists():
             route_path.unlink(missing_ok=True)
             removed.append(route_path.name)
+            if route_stats_key in self._route_stats:
+                self._route_stats.pop(route_stats_key, None)
+                save_route_stats(self._route_stats)
         if removed:
             self._append_log(f"[WARN] Deleted resources for {key}: {', '.join(removed)}", tag="warn")
 
@@ -661,6 +873,9 @@ class PersistentLauncher:
             return
 
         self._variants[key]["route_name"] = key
+        # Replacing a route starts a new baseline for this route's success rate.
+        self._route_stats.pop(destination.stem, None)
+        save_route_stats(self._route_stats)
         save_variants(self._variants)
         self._append_log(f"[INFO] Replaced route for {key}: {destination.name}", tag="info")
         self._refresh_variant_list(select_key=key)
@@ -700,6 +915,8 @@ class PersistentLauncher:
             return
 
         route_path.unlink(missing_ok=True)
+        self._route_stats.pop(route_path.stem, None)
+        save_route_stats(self._route_stats)
         self._append_log(f"[WARN] Deleted route resource: {route_path.name}", tag="warn")
         self._refresh_checks()
         self._refresh_previews()
@@ -897,6 +1114,26 @@ class PersistentLauncher:
                     self._refresh_previews()
                 if not self.compact_log_var.get():
                     self._append_log(f"[STATS] Defence success runs: {self._last_defence_success}", tag="info")
+            elif name == "defence_replay_started":
+                self._timeline_replay_route_name = str(payload.get("route_name", "") or "").strip()
+                if self._timeline_replay_route_name != self._timeline_record_route_name:
+                    self._timeline_replay_events = []
+                else:
+                    self._timeline_replay_events = []
+                self._schedule_timeline_render()
+            elif name == "defence_replay_trace":
+                route_name = str(payload.get("route_name", "") or "").strip()
+                if route_name and route_name != self._timeline_replay_route_name:
+                    self._timeline_replay_route_name = route_name
+                    self._timeline_replay_events = []
+                events = payload.get("events", [])
+                if isinstance(events, list) and events:
+                    self._timeline_replay_events.extend(events)
+                    if len(self._timeline_replay_events) > 8000:
+                        self._timeline_replay_events = self._timeline_replay_events[-8000:]
+                    self._schedule_timeline_render()
+            elif name == "defence_replay_finished":
+                self._schedule_timeline_render()
             return
 
         if event_type == "state":
