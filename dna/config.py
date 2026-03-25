@@ -73,7 +73,7 @@ DEFAULT_CONFIG = {
     "defence_route_replay_hotkey": "i",
     "defence_route_record_keys": ["w", "a", "s", "d", "f", "e", "ctrl", "space", "shift", "q", "r"],
     "defence_route_replay_enabled": True,
-    "defence_route_replay_after_load_delay_sec": 1.5,
+    "defence_route_replay_after_load_delay_sec": 3.0,
     "defence_check_interval": 0.22,
     "defence_replay_tick_interval": 0.01,
     "defence_exit_confirm_frames": 12,

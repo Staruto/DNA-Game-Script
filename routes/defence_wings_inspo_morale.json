@@ -1,575 +1,485 @@
 {
   "route_name": "defence_wings_inspo_morale",
-  "created_at": "2026-03-23 23:01:26",
+  "created_at": "2026-03-25 20:08:32",
   "events": [
     {
-      "t": 1.8555,
+      "t": 1.6908,
+      "type": "key",
+      "key": "f",
+      "action": "down"
+    },
+    {
+      "t": 1.8601,
+      "type": "key",
+      "key": "f",
+      "action": "up"
+    },
+    {
+      "t": 2.3459,
       "type": "key",
       "key": "w",
       "action": "down"
     },
     {
-      "t": 2.121,
-      "type": "mouse",
-      "dx": -21,
-      "dy": 7
-    },
-    {
-      "t": 2.1315,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 2.1421,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 1
-    },
-    {
-      "t": 2.1526,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 1
-    },
-    {
-      "t": 2.1628,
-      "type": "mouse",
-      "dx": -11,
-      "dy": 4
-    },
-    {
-      "t": 2.1734,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 1
-    },
-    {
-      "t": 2.1839,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 1
-    },
-    {
-      "t": 2.1944,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 2
-    },
-    {
-      "t": 2.2046,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 2
-    },
-    {
-      "t": 2.2152,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 2.2367,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 2.2473,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 2.2997,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.3102,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.321,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.3315,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.3418,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 1
-    },
-    {
-      "t": 2.3523,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 2.3744,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.3849,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 2.4057,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 2.4163,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 2.7856,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.7962,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 2
-    },
-    {
-      "t": 2.8067,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.8172,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 2.8277,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 2.9127,
+      "t": 2.7889,
       "type": "key",
-      "key": "space",
+      "key": "shift",
       "action": "down"
     },
     {
-      "t": 3.0279,
+      "t": 2.9579,
       "type": "key",
-      "key": "space",
+      "key": "shift",
       "action": "up"
     },
     {
-      "t": 3.3233,
-      "type": "key",
-      "key": "space",
-      "action": "down"
+      "t": 3.475,
+      "type": "mouse",
+      "dx": -81,
+      "dy": 32
     },
     {
-      "t": 3.3443,
+      "t": 3.4856,
       "type": "mouse",
-      "dx": 0,
-      "dy": 1
+      "dx": -6,
+      "dy": 2
     },
     {
-      "t": 3.3549,
+      "t": 3.4966,
       "type": "mouse",
-      "dx": -2,
+      "dx": -13,
+      "dy": 5
+    },
+    {
+      "t": 3.5071,
+      "type": "mouse",
+      "dx": -7,
       "dy": 3
     },
     {
-      "t": 3.3655,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.3759,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 2
-    },
-    {
-      "t": 3.3864,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 1
-    },
-    {
-      "t": 3.3967,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 4
-    },
-    {
-      "t": 3.4073,
-      "type": "mouse",
-      "dx": 0,
-      "dy": 1
-    },
-    {
-      "t": 3.4603,
-      "type": "key",
-      "key": "space",
-      "action": "up"
-    },
-    {
-      "t": 4.0198,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 4.0408,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -2
-    },
-    {
-      "t": 4.0512,
-      "type": "mouse",
-      "dx": 0,
-      "dy": -1
-    },
-    {
-      "t": 4.0617,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 4.1037,
-      "type": "key",
-      "key": "shift",
-      "action": "down"
-    },
-    {
-      "t": 4.4096,
-      "type": "key",
-      "key": "shift",
-      "action": "up"
-    },
-    {
-      "t": 4.4733,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "down"
-    },
-    {
-      "t": 4.5475,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "up"
-    },
-    {
-      "t": 4.6215,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "down"
-    },
-    {
-      "t": 4.7169,
-      "type": "mouse_button",
-      "button": "left",
-      "action": "up"
-    },
-    {
-      "t": 5.8766,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 0
-    },
-    {
-      "t": 5.8872,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 5.8977,
-      "type": "mouse",
-      "dx": -1,
-      "dy": 0
-    },
-    {
-      "t": 5.9082,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 0
-    },
-    {
-      "t": 5.9187,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 5.9298,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 5.9403,
+      "t": 3.5177,
       "type": "mouse",
       "dx": -5,
-      "dy": 0
+      "dy": 1
     },
     {
-      "t": 5.9507,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 5.9612,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 0
-    },
-    {
-      "t": 5.9717,
+      "t": 3.5282,
       "type": "mouse",
       "dx": -1,
       "dy": 0
     },
     {
-      "t": 6.0243,
-      "type": "key",
-      "key": "shift",
-      "action": "down"
-    },
-    {
-      "t": 6.4784,
-      "type": "key",
-      "key": "shift",
-      "action": "up"
-    },
-    {
-      "t": 6.9206,
-      "type": "key",
-      "key": "shift",
-      "action": "down"
-    },
-    {
-      "t": 7.4171,
-      "type": "key",
-      "key": "shift",
-      "action": "up"
-    },
-    {
-      "t": 7.8706,
+      "t": 3.5493,
       "type": "mouse",
       "dx": -1,
       "dy": 0
     },
     {
-      "t": 7.8811,
+      "t": 3.5598,
       "type": "mouse",
-      "dx": -4,
+      "dx": -1,
       "dy": 0
     },
     {
-      "t": 7.8917,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 0
-    },
-    {
-      "t": 7.9023,
-      "type": "mouse",
-      "dx": -7,
-      "dy": 0
-    },
-    {
-      "t": 7.9131,
-      "type": "mouse",
-      "dx": -6,
-      "dy": 0
-    },
-    {
-      "t": 7.9237,
+      "t": 3.5704,
       "type": "mouse",
       "dx": -2,
       "dy": 0
     },
     {
-      "t": 7.9342,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 7.9447,
-      "type": "mouse",
-      "dx": -2,
-      "dy": 0
-    },
-    {
-      "t": 8.0715,
+      "t": 4.056,
       "type": "key",
       "key": "shift",
       "action": "down"
     },
     {
-      "t": 8.3024,
+      "t": 4.0876,
       "type": "mouse",
-      "dx": 1,
-      "dy": 0
-    },
-    {
-      "t": 8.3129,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -2
-    },
-    {
-      "t": 8.3234,
-      "type": "mouse",
-      "dx": 4,
+      "dx": 0,
       "dy": -1
     },
     {
-      "t": 8.3345,
-      "type": "mouse",
-      "dx": 1,
-      "dy": -1
-    },
-    {
-      "t": 8.3451,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -1
-    },
-    {
-      "t": 8.3556,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -1
-    },
-    {
-      "t": 8.3661,
-      "type": "mouse",
-      "dx": 2,
-      "dy": -1
-    },
-    {
-      "t": 8.3767,
-      "type": "mouse",
-      "dx": 4,
-      "dy": -2
-    },
-    {
-      "t": 8.3872,
+      "t": 4.3087,
       "type": "key",
       "key": "shift",
       "action": "up"
     },
     {
-      "t": 8.3976,
+      "t": 4.4351,
       "type": "mouse",
-      "dx": 1,
+      "dx": 0,
+      "dy": -1
+    },
+    {
+      "t": 4.6989,
+      "type": "mouse",
+      "dx": -1,
       "dy": 0
     },
     {
-      "t": 8.6923,
+      "t": 4.7199,
       "type": "mouse",
       "dx": -2,
       "dy": 0
     },
     {
-      "t": 8.7025,
+      "t": 4.7304,
       "type": "mouse",
-      "dx": -4,
+      "dx": 0,
+      "dy": 1
+    },
+    {
+      "t": 4.741,
+      "type": "mouse",
+      "dx": -1,
       "dy": 0
     },
     {
-      "t": 8.7131,
-      "type": "mouse",
-      "dx": -4,
-      "dy": 0
-    },
-    {
-      "t": 8.7236,
-      "type": "mouse",
-      "dx": -3,
-      "dy": 0
-    },
-    {
-      "t": 8.7341,
-      "type": "mouse",
-      "dx": -5,
-      "dy": 0
-    },
-    {
-      "t": 8.7447,
+      "t": 4.7514,
       "type": "mouse",
       "dx": -2,
       "dy": 1
     },
     {
-      "t": 8.7552,
+      "t": 4.7625,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 4.7835,
       "type": "mouse",
       "dx": -1,
       "dy": 0
     },
     {
-      "t": 8.7868,
+      "t": 4.8046,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 4.8263,
       "type": "mouse",
       "dx": -1,
       "dy": 0
     },
     {
-      "t": 9.1021,
+      "t": 4.8471,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.8576,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 4.879,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.8897,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.9004,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 4.9109,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.9214,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.9425,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.953,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.9635,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.974,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.9845,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 4.995,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.0055,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 5.027,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.069,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.1003,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.1109,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 5.1319,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.153,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.1635,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 5.174,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.1845,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 5.2159,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 5.3531,
       "type": "key",
       "key": "shift",
       "action": "down"
     },
     {
-      "t": 9.3232,
+      "t": 5.5539,
       "type": "key",
       "key": "shift",
       "action": "up"
     },
     {
-      "t": 10.0076,
+      "t": 6.9796,
       "type": "key",
       "key": "shift",
       "action": "down"
     },
     {
-      "t": 10.1024,
+      "t": 7.4746,
       "type": "key",
       "key": "shift",
       "action": "up"
     },
     {
-      "t": 10.3549,
+      "t": 8.1928,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 8.5614,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 9.2153,
+      "type": "mouse",
+      "dx": -26,
+      "dy": 0
+    },
+    {
+      "t": 9.2261,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 9.2366,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 9.2471,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.321,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 9.3315,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.342,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.3526,
+      "type": "mouse",
+      "dx": -2,
+      "dy": 0
+    },
+    {
+      "t": 9.3632,
+      "type": "mouse",
+      "dx": -3,
+      "dy": 0
+    },
+    {
+      "t": 9.3842,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.3947,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.4053,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.4157,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.4263,
+      "type": "mouse",
+      "dx": -1,
+      "dy": 0
+    },
+    {
+      "t": 9.6273,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 9.8068,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 10.6293,
+      "type": "mouse",
+      "dx": 1,
+      "dy": 0
+    },
+    {
+      "t": 10.6401,
+      "type": "mouse",
+      "dx": 1,
+      "dy": -1
+    },
+    {
+      "t": 11.1053,
+      "type": "key",
+      "key": "shift",
+      "action": "down"
+    },
+    {
+      "t": 11.233,
+      "type": "key",
+      "key": "shift",
+      "action": "up"
+    },
+    {
+      "t": 12.0128,
       "type": "key",
       "key": "w",
+      "action": "up"
+    },
+    {
+      "t": 12.3711,
+      "type": "key",
+      "key": "q",
+      "action": "down"
+    },
+    {
+      "t": 12.4659,
+      "type": "key",
+      "key": "q",
       "action": "up"
     }
   ]
