@@ -45,6 +45,8 @@ class DefenceState:
     recovery_notice_count: int = 0
     popup_detected_logged: bool = False
     replay_locked_until_restart: bool = False
+    replay_exec_events: List[dict] = field(default_factory=list)
+    replay_exec_emitted: int = 0
 
 
 @dataclass

@@ -452,6 +452,8 @@ class DefenceService:
             state.replay_finished_at = 0.0
             state.validation_attempted = False
             state.missing_route_warned = False
+            state.replay_exec_events = []
+            state.replay_exec_emitted = 0
 
         if state.replay_events is None:
             state.replay_events = self.route_manager.load_route(route_name)
@@ -474,6 +476,8 @@ class DefenceService:
             state.replay_pending_until = 0.0
             state.replay_finished_at = 0.0
             state.validation_attempted = False
+            state.replay_exec_events = []
+            state.replay_exec_emitted = 0
             print(f"[INFO] Defence route replay started: {route_name}")
 
         elapsed = max(0.0, now - state.replay_start_ts)
@@ -487,29 +491,46 @@ class DefenceService:
             if evt_t > elapsed:
                 break
             evt_type = evt.get("type")
+            ok = True
+            trace_item = {
+                "expected_t": round(evt_t, 4),
+                "actual_t": round(elapsed, 4),
+                "delta_ms": round((elapsed - evt_t) * 1000.0, 1),
+                "type": str(evt_type or ""),
+            }
             if evt_type == "key":
                 key = str(evt.get("key", "")).lower()
                 action = str(evt.get("action", "")).lower()
+                trace_item["key"] = key
+                trace_item["action"] = action
                 if action == "down":
-                    if self.controller.key_down(key):
+                    ok = self.controller.key_down(key)
+                    if ok:
                         held_keys.add(key)
                 elif action == "up":
-                    self.controller.key_up(key)
+                    ok = self.controller.key_up(key)
                     held_keys.discard(key)
             elif evt_type == "mouse":
                 dx = self._scale_mouse_delta(int(evt.get("dx", 0)))
                 dy = self._scale_mouse_delta(int(evt.get("dy", 0)))
+                trace_item["dx"] = dx
+                trace_item["dy"] = dy
                 if dx != 0 or dy != 0:
                     self.controller.move_mouse_relative(dx, dy)
             elif evt_type == "mouse_button":
                 button = str(evt.get("button", "")).lower()
                 action = str(evt.get("action", "")).lower()
+                trace_item["button"] = button
+                trace_item["action"] = action
                 if action == "down":
-                    if self.controller.mouse_button_down(button):
+                    ok = self.controller.mouse_button_down(button)
+                    if ok:
                         held_mouse_buttons.add(button)
                 elif action == "up":
-                    self.controller.mouse_button_up(button)
+                    ok = self.controller.mouse_button_up(button)
                     held_mouse_buttons.discard(button)
+            trace_item["ok"] = bool(ok)
+            state.replay_exec_events.append(trace_item)
             idx += 1
 
         state.replay_index = idx

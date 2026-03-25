@@ -87,6 +87,8 @@ class DefenceRouteManager:
         state.recovery_notice_count = 0
         state.popup_detected_logged = False
         state.replay_locked_until_restart = False
+        state.replay_exec_events = []
+        state.replay_exec_emitted = 0
         if clear_variant:
             state.current_variant = None
             state.active_route_name = None
