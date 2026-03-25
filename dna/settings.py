@@ -10,6 +10,7 @@ SETTINGS_FILE = ROOT_DIR / "settings.json"
 ALLOWED_DUNGEON_MODES = {"auto", "manual"}
 ALLOWED_MANUAL_DUNGEONS = {"defence", "expulsion"}
 ALLOWED_DEFENCE_ROUTE_MODES = {"auto", "record", "playback"}
+ALLOWED_BONUS_TIERS = {"none", "green", "blue", "purple", "gold"}
 
 
 def _normalize_mode(value: Any, fallback: str) -> str:
@@ -56,6 +57,25 @@ def _normalize_route_mode(value: Any, fallback: str) -> str:
     return fallback
 
 
+def _normalize_bonus_tier(value: Any, fallback: str) -> str:
+    tier = str(value).strip().lower()
+    if tier in ALLOWED_BONUS_TIERS:
+        return tier
+    return fallback
+
+
+def _normalize_bonus_enable_count(value: Any, fallback: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    if parsed < 0:
+        return 0
+    if parsed > 999:
+        return 999
+    return parsed
+
+
 def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) -> Dict[str, Any]:
     fallback_mode = _normalize_mode(base.get("dungeon_mode", "auto"), "auto")
     fallback_manual = _normalize_manual_dungeon(base.get("manual_dungeon", "defence"), "defence")
@@ -65,6 +85,8 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
     fallback_auto_detect_defence = _normalize_bool(base.get("auto_detect_defence", True), True)
     fallback_manual_variant = str(base.get("manual_defence_variant", "")).strip()
     fallback_route_mode = _normalize_route_mode(base.get("defence_route_mode_override", "auto"), "auto")
+    fallback_bonus_tier = _normalize_bonus_tier(base.get("bonus_tier", "none"), "none")
+    fallback_bonus_count = _normalize_bonus_enable_count(base.get("bonus_enable_count", 50), 50)
 
     mode = _normalize_mode(raw.get("dungeon_mode", fallback_mode), fallback_mode)
     manual = _normalize_manual_dungeon(raw.get("manual_dungeon", fallback_manual), fallback_manual)
@@ -77,6 +99,8 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
         raw.get("defence_route_mode_override", fallback_route_mode),
         fallback_route_mode,
     )
+    bonus_tier = _normalize_bonus_tier(raw.get("bonus_tier", fallback_bonus_tier), fallback_bonus_tier)
+    bonus_enable_count = _normalize_bonus_enable_count(raw.get("bonus_enable_count", fallback_bonus_count), fallback_bonus_count)
 
     return {
         "dungeon_mode": mode,
@@ -87,6 +111,8 @@ def normalize_runtime_settings(raw: Mapping[str, Any], base: Mapping[str, Any]) 
         "auto_detect_defence": auto_detect_defence,
         "manual_defence_variant": manual_defence_variant,
         "defence_route_mode_override": defence_route_mode_override,
+        "bonus_tier": bonus_tier,
+        "bonus_enable_count": bonus_enable_count,
     }
 
 

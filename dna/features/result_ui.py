@@ -17,7 +17,7 @@ class ResultUIService:
         self.controller = controller
         self.awaiting_start_until = 0.0
 
-    def check_and_click_result_ui(self, profile: DungeonProfile):
+    def check_and_click_result_ui(self, profile: DungeonProfile, session: object = None):
         gray = self.capture.grab_gray(self.config["result_region"])
 
         if profile.use_challenge_again:
@@ -61,6 +61,19 @@ class ResultUIService:
         for pt in zip(*loc_start[::-1]):
             click_x = pt[0] + int(w / 2) + self.config["result_region"]["left"]
             click_y = pt[1] + int(h / 2) + self.config["result_region"]["top"]
+
+            # Handle bonus selection
+            bonus_tier = self.config.get("bonus_tier", "none")
+            if session and hasattr(session, "bonus_remaining") and session.bonus_remaining > 0 and bonus_tier != "none":
+                coords = self.config.get("bonus_coordinates", {}).get(bonus_tier)
+                if coords:
+                    bx = click_x + coords["x_offset"]
+                    by = click_y + coords["y_offset"]
+                    print(f"[INFO] Selecting bonus: {bonus_tier}, remaining: {session.bonus_remaining - 1}")
+                    self.controller.move_and_click(bx, by, delay=0.15)
+                    session.bonus_remaining -= 1
+                    time.sleep(0.2)
+
             print(f"[INFO] Start button detected ({profile.display_name}). Clicking at ({click_x}, {click_y}).")
             self.controller.move_and_click(click_x, click_y, delay=0.15)
             self.awaiting_start_until = 0.0

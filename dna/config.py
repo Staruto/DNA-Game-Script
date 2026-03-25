@@ -105,6 +105,15 @@ DEFAULT_CONFIG = {
     "game_window_keywords": ["Duet Night Abyss", "Abyss"],
     "only_when_foreground": True,
     "block_keyboard_when_taskbar_visible": True,
+    "bonus_tier": "none",
+    "bonus_enable_count": 50,
+    "bonus_coordinates": {
+        "none": {"x_offset": -742, "y_offset": -326},
+        "green": {"x_offset": -502, "y_offset": -326},
+        "blue": {"x_offset": -262, "y_offset": -326},
+        "purple": {"x_offset": -22, "y_offset": -326},
+        "gold": {"x_offset": 218, "y_offset": -326}
+    },
 }
 
 

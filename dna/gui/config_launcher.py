@@ -59,6 +59,9 @@ class PersistentLauncher:
         self.target_runs_var = tk.StringVar(value=str(initial_config.get("target_runs", 0)))
         self.compact_log_var = tk.BooleanVar(value=bool(initial_config.get("compact_log_enabled", True)))
         self.status_var = tk.StringVar(value="Idle")
+        
+        self.bonus_tier_var = tk.StringVar(value=str(initial_config.get("bonus_tier", "none")))
+        self.bonus_enable_count_var = tk.StringVar(value=str(initial_config.get("bonus_enable_count", 50)))
 
         self.variant_name_var = tk.StringVar(value="")
         self.variant_name_var.trace_add("write", self._on_variant_name_changed)
@@ -111,8 +114,22 @@ class PersistentLauncher:
         self.target_entry = ttk.Entry(general_tab, textvariable=self.target_runs_var, width=18)
         self.target_entry.grid(row=2, column=1, sticky="w")
 
+        ttk.Label(general_tab, text="Bonus Tier").grid(row=3, column=0, sticky="w", pady=(0, 6), padx=(0, 10))
+        self.bonus_tier_combo = ttk.Combobox(
+            general_tab,
+            textvariable=self.bonus_tier_var,
+            state="readonly",
+            values=("none", "green", "blue", "purple", "gold"),
+            width=16,
+        )
+        self.bonus_tier_combo.grid(row=3, column=1, sticky="w", pady=(0, 6))
+        
+        ttk.Label(general_tab, text="Bonus Enable Count").grid(row=4, column=0, sticky="w", padx=(0, 10))
+        self.bonus_enable_count_entry = ttk.Entry(general_tab, textvariable=self.bonus_enable_count_var, width=18)
+        self.bonus_enable_count_entry.grid(row=4, column=1, sticky="w")
+
         self.compact_log_check = ttk.Checkbutton(general_tab, text="Compact log mode", variable=self.compact_log_var)
-        self.compact_log_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.compact_log_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         ttk.Label(expulsion_tab, text="No extra settings for expulsion yet.").pack(anchor="w")
 
@@ -939,12 +956,20 @@ class PersistentLauncher:
             "auto_detect_defence": self.auto_detect_defence_var.get(),
             "manual_defence_variant": self._active_variant_key,
             "defence_route_mode_override": self.route_mode_var.get().strip().lower(),
+            "bonus_tier": self.bonus_tier_var.get().strip().lower(),
+            "bonus_enable_count": self.bonus_enable_count_var.get().strip(),
         }
 
         try:
             int(candidate["target_runs"])
         except ValueError:
             messagebox.showerror("Invalid Setting", "target_runs must be a non-negative integer.")
+            return None
+            
+        try:
+            int(candidate["bonus_enable_count"])
+        except ValueError:
+            messagebox.showerror("Invalid Setting", "bonus_enable_count must be a non-negative integer.")
             return None
 
         normalized = normalize_runtime_settings(candidate, self._initial)
