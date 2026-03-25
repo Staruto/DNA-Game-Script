@@ -108,11 +108,11 @@ DEFAULT_CONFIG = {
     "bonus_tier": "none",
     "bonus_enable_count": 50,
     "bonus_coordinates": {
-        "none": {"x_offset": -742, "y_offset": -326},
-        "green": {"x_offset": -502, "y_offset": -326},
-        "blue": {"x_offset": -262, "y_offset": -326},
-        "purple": {"x_offset": -22, "y_offset": -326},
-        "gold": {"x_offset": 218, "y_offset": -326}
+        "none": {"x_offset": -742, "y_offset": -420},
+        "green": {"x_offset": -502, "y_offset": -420},
+        "blue": {"x_offset": -262, "y_offset": -420},
+        "purple": {"x_offset": -22, "y_offset": -420},
+        "gold": {"x_offset": 218, "y_offset": -420}
     },
 }
 
