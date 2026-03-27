@@ -41,7 +41,7 @@ class SkillService:
                     best_score = score
                     best_pair = f"{s_name}/{t_name}"
 
-        threshold = float(self.config.get("skill_zero_threshold", 0.72))
+        threshold = float(self.config.get("skill_zero_threshold", 0.76))
         if bool(self.config.get("debug_skill_scores", False)):
             print(f"[DEBUG] skill_zero best_score={best_score:.3f} pair={best_pair} threshold={threshold:.3f}")
         return best_score >= threshold

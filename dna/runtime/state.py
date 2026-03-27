@@ -74,3 +74,4 @@ class SessionState:
     last_q_press_time: float = 0.0
     runs_completed: int = 0
     session_start_ts: float = 0.0
+    bonus_remaining: int = 0

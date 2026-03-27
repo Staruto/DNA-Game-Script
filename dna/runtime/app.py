@@ -157,7 +157,10 @@ class DNAApp:
         print("[INFO] Switch to the game window. Starting in 3 seconds...")
         time.sleep(3)
 
-        session = SessionState(session_start_ts=time.time())
+        session = SessionState(
+            session_start_ts=time.time(),
+            bonus_remaining=int(self.config.get("bonus_enable_count", 0))
+        )
         loot_state = LootState()
         defence_state = DefenceState()
         defence_success_runs = 0
@@ -230,7 +233,7 @@ class DNAApp:
 
                 if now - session.last_result_check >= self.config["result_check_interval"]:
                     session.last_result_check = now
-                    result_action = self.result_ui.check_and_click_result_ui(active_profile)
+                    result_action = self.result_ui.check_and_click_result_ui(active_profile, session=session)
                     if result_action == "start_clicked":
                         completed_variant = defence_state.current_variant
                         completed_route = defence_state.active_route_name
