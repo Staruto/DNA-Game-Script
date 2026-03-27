@@ -33,8 +33,6 @@ DEFAULT_CONFIG = {
     "skill_detect_mode": "zero",
     "skill_zero_threshold": 0.82,
     "debug_skill_scores": False,
-    "skill_glow_threshold": 0.72,
-    "skill_glow_score_margin": 0.02,
     "loot_enabled": True,
     "loot_marker_template": "wedge.png",
     "loot_check_interval": 0.35,
