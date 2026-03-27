@@ -4,6 +4,7 @@ import json
 import math
 import shutil
 import subprocess
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
@@ -35,6 +36,10 @@ class PersistentLauncher:
         self._timeline_record_route_name = ""
         self._timeline_replay_route_name = ""
         self._timeline_render_pending = False
+        self._timeline_render_after_id: Optional[str] = None
+        self._timeline_last_render_ts = 0.0
+        self._timeline_last_canvas_width = 0
+        self._timeline_min_render_interval_sec = 0.05
 
         self._variants = load_variants(initial_config)
         initial_variant = str(initial_config.get("manual_defence_variant", "")).strip()
@@ -84,7 +89,7 @@ class PersistentLauncher:
         style = ttk.Style(self.root)
         style.configure("Launcher.TNotebook.Tab", padding=(18, 10), font=("Segoe UI", 11, "bold"))
         self.notebook = ttk.Notebook(container, style="Launcher.TNotebook")
-        self.notebook.pack(fill="x")
+        self.notebook.pack(fill="both", expand=True)
 
         general_tab = ttk.Frame(self.notebook, padding=10)
         expulsion_tab = ttk.Frame(self.notebook, padding=10)
@@ -268,7 +273,7 @@ class PersistentLauncher:
         self.timeline_scroll_x = ttk.Scrollbar(timeline_frame, orient="horizontal", command=self.timeline_canvas.xview)
         self.timeline_scroll_x.pack(fill="x")
         self.timeline_canvas.configure(xscrollcommand=self.timeline_scroll_x.set)
-        self.timeline_canvas.bind("<Configure>", lambda _e: self._schedule_timeline_render())
+        self.timeline_canvas.bind("<Configure>", self._on_timeline_canvas_configure)
 
         control_frame = ttk.Frame(container)
         control_frame.pack(fill="x", pady=(10, 8))
@@ -364,8 +369,19 @@ class PersistentLauncher:
     def _schedule_timeline_render(self):
         if self._timeline_render_pending:
             return
+        now = time.time()
+        elapsed = now - self._timeline_last_render_ts
+        delay_ms = 1
+        if elapsed < self._timeline_min_render_interval_sec:
+            delay_ms = int((self._timeline_min_render_interval_sec - elapsed) * 1000) + 1
         self._timeline_render_pending = True
-        self.root.after(1, self._render_timeline)
+        self._timeline_render_after_id = self.root.after(delay_ms, self._render_timeline)
+
+    def _on_timeline_canvas_configure(self, event):
+        width = int(event.width or 0)
+        if width != self._timeline_last_canvas_width:
+            self._timeline_last_canvas_width = width
+            self._schedule_timeline_render()
 
     def _build_key_intervals(self, events: list[dict], use_actual: bool) -> dict[str, list[tuple[float, float]]]:
         held: dict[str, float] = {}
@@ -415,7 +431,9 @@ class PersistentLauncher:
         return buckets
 
     def _render_timeline(self):
+        self._timeline_render_after_id = None
         self._timeline_render_pending = False
+        self._timeline_last_render_ts = time.time()
         canvas = self.timeline_canvas
         canvas.delete("all")
 
