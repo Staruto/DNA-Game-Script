@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
     "skill_state_confirm_frames": 2,
     "skill_press_retry_interval": 8.0,
     "skill_detect_mode": "zero",
-    "skill_zero_threshold": 0.72,
+    "skill_zero_threshold": 0.82,
     "debug_skill_scores": False,
     "skill_glow_threshold": 0.72,
     "skill_glow_score_margin": 0.02,

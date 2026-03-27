@@ -110,9 +110,9 @@ class PersistentLauncher:
         self.manual_combo.grid(row=1, column=1, sticky="w", pady=(0, 6))
         self.manual_combo.bind("<<ComboboxSelected>>", self._on_manual_dungeon_changed)
 
-        ttk.Label(general_tab, text="Target Runs (0 = infinite)").grid(row=2, column=0, sticky="w", padx=(0, 10))
+        ttk.Label(general_tab, text="Target Runs (0 = infinite)").grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 6))
         self.target_entry = ttk.Entry(general_tab, textvariable=self.target_runs_var, width=18)
-        self.target_entry.grid(row=2, column=1, sticky="w")
+        self.target_entry.grid(row=2, column=1, sticky="w", pady=(0, 6))
 
         ttk.Label(general_tab, text="Bonus Tier").grid(row=3, column=0, sticky="w", pady=(0, 6), padx=(0, 10))
         self.bonus_tier_combo = ttk.Combobox(
@@ -124,9 +124,9 @@ class PersistentLauncher:
         )
         self.bonus_tier_combo.grid(row=3, column=1, sticky="w", pady=(0, 6))
         
-        ttk.Label(general_tab, text="Bonus Enable Count").grid(row=4, column=0, sticky="w", padx=(0, 10))
+        ttk.Label(general_tab, text="Bonus Enable Count").grid(row=4, column=0, sticky="w", padx=(0, 10), pady=(0, 6))
         self.bonus_enable_count_entry = ttk.Entry(general_tab, textvariable=self.bonus_enable_count_var, width=18)
-        self.bonus_enable_count_entry.grid(row=4, column=1, sticky="w")
+        self.bonus_enable_count_entry.grid(row=4, column=1, sticky="w", pady=(0, 6))
 
         self.compact_log_check = ttk.Checkbutton(general_tab, text="Compact log mode", variable=self.compact_log_var)
         self.compact_log_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=(8, 0))
