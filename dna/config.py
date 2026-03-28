@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import Optional
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-ASSETS_DIR = ROOT_DIR / "assets"
-ROUTES_DIR = ROOT_DIR / "routes"
+DEFINITIONS_DIR = ROOT_DIR / "dna" / "definitions"
+ASSETS_DIR = DEFINITIONS_DIR / "assets"
+ROUTES_DIR = DEFINITIONS_DIR / "routes"
+DATA_DIR = ROOT_DIR / "data"
 
 DEFAULT_CONFIG = {
     "skill_region": {"left": 1700, "top": 1000, "width": 860, "height": 440},
@@ -121,6 +123,10 @@ def get_default_config() -> dict:
 
 def workspace_path(*parts: str) -> Path:
     return ROOT_DIR.joinpath(*parts)
+
+
+def data_path(*parts: str) -> Path:
+    return DATA_DIR.joinpath(*parts)
 
 
 def asset_path(file_name: str) -> Path:

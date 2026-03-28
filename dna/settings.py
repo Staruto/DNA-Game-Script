@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
-from dna.config import ROOT_DIR
+from dna.config import data_path
 
-SETTINGS_FILE = ROOT_DIR / "settings.json"
+SETTINGS_FILE = data_path("settings.json")
 ALLOWED_DUNGEON_MODES = {"auto", "manual"}
 ALLOWED_MANUAL_DUNGEONS = {"defence", "expulsion"}
 ALLOWED_DEFENCE_ROUTE_MODES = {"auto", "record", "playback"}
@@ -134,5 +134,6 @@ def load_settings_overrides(base: Mapping[str, Any]) -> Dict[str, Any]:
 
 def save_settings_overrides(values: Mapping[str, Any], base: Mapping[str, Any]) -> Path:
     normalized = normalize_runtime_settings(values, base)
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
     SETTINGS_FILE.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
     return SETTINGS_FILE

@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
-from dna.config import ROOT_DIR
+from dna.config import data_path
 
-DEFAULT_VARIANTS_FILE = ROOT_DIR / "defence_variants.json"
+DEFAULT_VARIANTS_FILE = data_path("defence_variants.json")
 
 
 def _normalize_variant_key(value: Any) -> str:
@@ -70,5 +70,6 @@ def save_variants(variants: Mapping[str, Any], file_path: Path = DEFAULT_VARIANT
         "version": 1,
         "variants": normalized,
     }
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return file_path

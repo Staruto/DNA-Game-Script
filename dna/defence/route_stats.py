@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from dna.config import ROOT_DIR
+from dna.config import data_path
 
-ROUTE_STATS_FILE = ROOT_DIR / "defence_route_stats.json"
+ROUTE_STATS_FILE = data_path("defence_route_stats.json")
 
 
 def load_route_stats(path: Path = ROUTE_STATS_FILE) -> Dict[str, Dict[str, int]]:
@@ -40,6 +40,7 @@ def load_route_stats(path: Path = ROUTE_STATS_FILE) -> Dict[str, Dict[str, int]]
 
 def save_route_stats(stats: Dict[str, Dict[str, int]], path: Path = ROUTE_STATS_FILE) -> Path:
     payload: Dict[str, Any] = {"version": 1, "routes": stats}
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
